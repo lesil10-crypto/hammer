@@ -148,6 +148,47 @@
             opacity: 1;
         }
 
+        @media print {
+            body {
+                background-color: #fff !important;
+                font-family: 'Times New Roman', serif;
+            }
+            #app > header, .sticky, #tab-bar, footer, .modal, .toast, .tooltip {
+                display: none !important;
+            }
+            #tab-content-container > div {
+                display: none !important;
+            }
+            .active-tab-content {
+                display: block !important;
+            }
+             #app {
+                max-width: 100%;
+                padding: 0;
+                margin: 0;
+            }
+            .card, .btn-3d, .icon-btn {
+                box-shadow: none;
+                border: 1px solid #ccc;
+                background-color: #fff !important;
+            }
+            .clickable-word {
+                color: #000;
+                border: none;
+                font-weight: bold;
+            }
+            img {
+                page-break-inside: avoid;
+            }
+            /* Hide action buttons in print view */
+            .icon-btn, .btn-3d[onclick*="speak"], #print-btn {
+                 display: none !important;
+            }
+            .quiz-button, [id^="print-btn"] {
+                 display: none !important;
+            }
+        }
+
     </style>
 </head>
 <body class="bg-slate-100 text-gray-800">
@@ -177,8 +218,13 @@
              </div>
         </div>
         
+        <!-- Tab Bar -->
+        <div id="tab-bar" class="flex flex-wrap items-end border-b-2 border-slate-300 mb-4">
+            <!-- Tabs will be dynamically inserted here -->
+        </div>
+        
         <!-- 콘텐츠 영역 -->
-        <main id="content-container" class="space-y-8"></main>
+        <main id="tab-content-container"></main>
 
         <!-- 고정 하단 메뉴 -->
         <footer class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm shadow-t border-t-2 border-slate-200 z-50">
@@ -254,7 +300,7 @@
         // Firebase SDK imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, addDoc, deleteDoc, query, writeBatch, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ---------------------------
@@ -262,47 +308,30 @@
         // ---------------------------
         const searchInput = document.getElementById('search-input');
         const searchButton = document.getElementById('search-button');
-        const contentContainer = document.getElementById('content-container');
         const loadingContainer = document.getElementById('loading-container');
         const loadingText = document.getElementById('loading-text');
         const progressBar = document.getElementById('progress-bar');
         
-        // =================================================================================
-        // !!! 중요 보안 경고 !!!
-        // API 키를 클라이언트 사이드 코드에 직접 노출하는 것은 매우 위험합니다.
-        // 이 키는 GitHub에 공개되어 누구나 볼 수 있으며, 악용될 경우 예기치 않은 요금이 발생할 수 있습니다.
-        // 실제 프로덕션 환경에서는 이 키를 백엔드 서버(예: Cloud Functions)로 옮기고,
-        // 웹사이트는 백엔드 서버와 통신하도록 구조를 변경해야 합니다.
-        // 이 코드는 학습 및 개인 프로젝트 목적으로만 사용해주세요.
-        // =================================================================================
-        const googleAiApiKey = "AIzaSyDKmpQO6htm7jZ2DByUfGnmocZP7dpTJhs"; // Google AI 용 API 키
+        const googleAiApiKey = ""; 
         const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent`;
         const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict`;
         
-        let currentSearchId = 0; // 비동기 충돌 방지를 위한 ID
-        const translationCache = {}; // 실시간 번역 캐시
+        const translationCache = {};
 
         // Firebase 설정
         let db, auth, userId, app, analytics;
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const firestoreAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-          apiKey: "AIzaSyDKmpQO6htm7jZ2DByUfGnmocZP7dpTJhs",
-          authDomain: "projec-48c55.firebaseapp.com",
-          projectId: "projec-48c55",
-          storageBucket: "projec-48c55.appspot.com", // 표준 형식으로 수정
-          messagingSenderId: "376464552007",
-          appId: "1:376464552007:web:929b53196fc86af19dc162",
-          measurementId: "G-HMKJMNFGM4"
-        };
         
-        // Firestore 경로에 사용될 앱 ID
-        const firestoreAppId = firebaseConfig.projectId;
+        // Tab Management
+        let tabs = {};
+        let activeTabId = null;
+        let tabCounter = 0;
         
         // Firestore 데이터베이스 초기화 및 익명 로그인
         async function initializeFirebase() {
             try {
-                // Initialize Firebase
                 app = initializeApp(firebaseConfig);
                 analytics = getAnalytics(app);
                 db = getFirestore(app);
@@ -312,27 +341,21 @@
                 onAuthStateChanged(auth, user => {
                     if (user) {
                         userId = user.uid;
-                        console.log("Authenticated User ID:", userId);
-                        loadUserLists(); // 인증 후 사용자 목록 로드
+                        loadUserLists(); 
                     } else {
-                        // User is signed out.
                         userId = null;
-                        console.log("User is not signed in.");
                     }
                 });
 
-                // Attempt to sign in only if there isn't a current user.
-                if (!auth.currentUser) {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else if (!auth.currentUser) {
                     await signInAnonymously(auth);
                 }
 
             } catch (error) {
                 console.error("Firebase Initialization/Auth Error: ", error);
-                if (error.code === 'auth/configuration-not-found') {
-                    showToast("Firebase 인증 설정 오류. 콘솔에서 '익명 로그인'을 활성화하세요.", "error");
-                } else {
-                    showToast("데이터베이스 연결 또는 인증에 실패했습니다.", "error");
-                }
+                showToast("데이터베이스 연결 또는 인증에 실패했습니다.", "error");
             }
         }
 
@@ -341,7 +364,6 @@
         // ---------------------------
 
         async function fetchWithRetry(url, payload, retries = 3) {
-            // API 키를 URL에 포함하여 요청
             const finalUrl = `${url}?key=${googleAiApiKey}`;
             for (let i = 0; i < retries; i++) {
                 try {
@@ -352,7 +374,7 @@
                     });
                     if (!response.ok) {
                         const errorBody = await response.text();
-                        console.error(`API Error Response: ${errorBody}`);
+                        console.error(`API Error Response: ${response.status} - ${errorBody}`);
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     return await response.json();
@@ -377,15 +399,18 @@
             
             const result = await fetchWithRetry(textApiUrl, payload);
             const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (!text) throw new Error("Gemini API response is empty.");
+            if (!text) {
+                console.error("Empty response from Gemini:", result);
+                throw new Error("Gemini API response is empty.");
+            }
 
             return isJson ? JSON.parse(text.trim()) : text;
         }
 
         async function callImagen(prompt) {
              const payload = { 
-                 instances: [{ prompt: prompt }],
-                 parameters: { sampleCount: 1 }
+                 instances: { prompt: prompt },
+                 parameters: { "sampleCount": 1 }
              };
             const result = await fetchWithRetry(imageApiUrl, payload);
             const base64Data = result.predictions?.[0]?.bytesBase64Encoded;
@@ -399,22 +424,57 @@
         // ---------------------------
         // 2. 핵심 로직: 검색 및 콘텐츠 생성
         // ---------------------------
-
-        async function handleSearch() {
-            const query = searchInput.value.trim();
+        
+        async function handleSearch(query) {
             if (!query) {
                 showToast("검색어를 입력해주세요.", "warning");
                 return;
             }
 
-            const searchId = ++currentSearchId;
+            const isKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(query);
+
+            if (isKorean) {
+                showLoader(0, `'${query}'에 대한 의미 확인 중...`);
+                try {
+                    const ambiguityPrompt = `한국어 단어 "${query}"가 여러 개의 뚜렷하게 다른 영어 단어로 번역될 수 있나요? (예: '배' -> ship, pear, stomach). 다음 JSON 형식으로만 대답해줘: {"is_ambiguous": boolean, "english_words": ["단어1", "단어2", ...]}. 모호하지 않으면 "english_words" 배열에 대표 영어 단어 하나만 포함해줘.`;
+                    const ambiguityData = await callGemini(ambiguityPrompt, true);
+                    
+                    if (ambiguityData.is_ambiguous && ambiguityData.english_words.length > 1) {
+                        showToast(`'${query}'에 대해 여러 의미를 찾았습니다. 각각 탭으로 표시합니다.`, "info");
+                        for (let i = 0; i < ambiguityData.english_words.length; i++) {
+                            const word = ambiguityData.english_words[i];
+                            await executeSearchForWord(word, i === 0);
+                        }
+                    } else {
+                        await executeSearchForWord(ambiguityData.english_words[0] || query);
+                    }
+                } catch (error) {
+                    console.error("Ambiguity check failed:", error);
+                    showToast("단어 의미 확인 중 오류가 발생했습니다.", "error");
+                    await executeSearchForWord(query);
+                } finally {
+                    hideLoader();
+                }
+            } else {
+                await executeSearchForWord(query);
+            }
+        }
+
+        async function executeSearchForWord(wordQuery, makeActive = true) {
+            const tabId = addTab(wordQuery, makeActive);
+            const currentTab = tabs[tabId];
+            const contentContainer = currentTab.contentEl;
             contentContainer.innerHTML = '';
-            showLoader(0, "검색을 시작합니다...");
+            
+            const searchId = ++currentTab.searchId;
+            currentTab.fullSearchResult = {};
+
+            showLoader(0, `"${wordQuery}" 검색을 시작합니다...`);
             searchButton.disabled = true;
 
             try {
                 updateLoader(10, "기본 정보 생성 중...");
-                const initialInfoPrompt = `영어 단어 "${query}"에 대한 종합적인 정보를 생성해줘. 다음 JSON 형식을 반드시 따라줘:
+                const initialInfoPrompt = `영어 단어 "${wordQuery}"에 대한 종합적인 정보를 생성해줘. 다음 JSON 형식을 반드시 따라줘:
                 {
                   "word": "실제 영어 단어",
                   "koreanMeaning": "대표적인 한글 뜻",
@@ -427,26 +487,31 @@
                   }
                 }`;
                 const initialData = await callGemini(initialInfoPrompt, true);
-                if (searchId !== currentSearchId) return;
+                currentTab.fullSearchResult.initialData = initialData;
+                if (searchId !== currentTab.searchId) return;
 
                 updateLoader(25, "기본 정보 표시 중...");
+                renderPrintButton(currentTab);
                 const placeholderImg = "https://placehold.co/300x300/e0e5ec/4a5568?text=Loading...";
-                renderBasicInfo(initialData, placeholderImg);
-                renderEpisode(initialData.episode, placeholderImg);
+                renderBasicInfo(initialData, placeholderImg, contentContainer);
+                renderEpisode(initialData.episode, placeholderImg, contentContainer);
                 addWordToHistory(initialData.word, initialData.koreanMeaning);
 
                 callImagen(initialData.mainImagePrompt).then(imageUrl => {
-                    if (searchId === currentSearchId) {
-                        const imgEl = document.getElementById('main-image');
+                    currentTab.fullSearchResult.mainImageUrl = imageUrl;
+                    if (searchId === currentTab.searchId) {
+                        const imgEl = contentContainer.querySelector('#main-image');
                         if (imgEl) {
                             imgEl.src = imageUrl;
                             imgEl.onclick = () => showImageModal(imageUrl);
                         }
                     }
                 });
+                
                 callImagen(initialData.episode.imagePrompt).then(imageUrl => {
-                     if (searchId === currentSearchId) {
-                        const imgEl = document.getElementById('episode-image');
+                     currentTab.fullSearchResult.episodeImageUrl = imageUrl;
+                     if (searchId === currentTab.searchId) {
+                        const imgEl = contentContainer.querySelector('#episode-image');
                         if (imgEl) {
                             imgEl.src = imageUrl;
                             imgEl.onclick = () => showImageModal(imageUrl);
@@ -462,20 +527,10 @@
                    { "type": "숙어 표현", "description": "단어가 포함된 중요 숙어와 그 의미에 대한 한글 설명.", "exampleSentence": "숙어가 사용된 자연스러운 영어 예문.", "exampleSentenceTranslation": "위 예문의 한글 번역.", "imagePrompt": "위 예문 내용을 기반으로 한 삽화 프롬프트." }
                  ]`;
                 const meaningsData = await callGemini(meaningsPrompt, true);
-                if (searchId !== currentSearchId) return;
+                currentTab.fullSearchResult.meaningsData = meaningsData;
+                if (searchId !== currentTab.searchId) return;
 
-                await renderMeanings(meaningsData, initialData.word, searchId);
-                 meaningsData.forEach((meaning, index) => {
-                     callImagen(meaning.imagePrompt).then(imageUrl => {
-                         if (searchId === currentSearchId) {
-                             const imgEl = document.getElementById(`meaning-image-${index}`);
-                             if (imgEl) {
-                                 imgEl.src = imageUrl;
-                                 imgEl.onclick = () => showImageModal(imageUrl);
-                             }
-                         }
-                     });
-                 });
+                await renderMeanings(meaningsData, initialData.word, searchId, currentTab, contentContainer);
 
                  updateLoader(75, "심화 학습 정보 생성 중...");
                  const fastDeepDivePrompt = `영어 단어 "${initialData.word}"에 대한 심화 학습 콘텐츠를 생성해줘. "encyclopedia"는 제외하고 다음 JSON 형식을 반드시 따라줘:
@@ -497,12 +552,13 @@
                    ]
                  }`;
                 const fastDeepDiveData = await callGemini(fastDeepDivePrompt, true);
-                if (searchId !== currentSearchId) return;
+                currentTab.fullSearchResult.fastDeepDiveData = fastDeepDiveData;
+                if (searchId !== currentTab.searchId) return;
                 
                 updateLoader(90, "심화 정보 표시 중...");
-                const buttonContainer = renderDeepDiveButtonsContainer();
+                const buttonContainer = renderDeepDiveButtonsContainer(contentContainer);
                 appendConceptTreeButton(buttonContainer, fastDeepDiveData.conceptTree);
-                renderDeepDive(fastDeepDiveData);
+                renderDeepDive(fastDeepDiveData, contentContainer);
                 hideLoader();
                 showToast("핵심 정보 로딩 완료! 백과사전 정보를 생성합니다...", "info");
 
@@ -513,15 +569,19 @@
                     "introduction_ko": "위 내용의 한글 번역", "etymology_ko": "위 내용의 한글 번역", "history_ko": "위 내용의 한글 번역", "usage_ko": "위 내용의 한글 번역"
                   }
                 }`;
-                callGemini(encyclopediaPrompt, true).then(encyclopediaFullData => {
-                    if (searchId === currentSearchId) {
-                        appendEncyclopediaButton(buttonContainer, encyclopediaFullData.encyclopedia);
-                        showToast("모든 콘텐츠 생성이 완료되었습니다!", "success");
+                const encyclopediaFullData = await callGemini(encyclopediaPrompt, true);
+                if (searchId === currentTab.searchId) {
+                    currentTab.fullSearchResult.encyclopediaData = encyclopediaFullData;
+                    appendEncyclopediaButton(buttonContainer, encyclopediaFullData.encyclopedia);
+                    showToast("모든 콘텐츠 생성이 완료되었습니다!", "success");
+
+                    const printButton = currentTab.contentEl.querySelector(`#print-btn-${currentTab.id}`);
+                    if (printButton) {
+                        printButton.disabled = false;
+                        printButton.innerHTML = `<i data-lucide="printer" class="inline-block mr-2"></i>결과 인쇄하기`;
+                        safeCreateIcons();
                     }
-                }).catch(error => {
-                    console.error("Failed to fetch encyclopedia data:", error);
-                    showToast("백과사전 정보 생성에 실패했습니다.", "error");
-                });
+                }
                 
             } catch (error) {
                 console.error("Search failed:", error);
@@ -535,12 +595,23 @@
                 searchButton.disabled = false;
             }
         }
-
+        
         // ---------------------------
         // 3. 렌더링 함수
         // ---------------------------
+        
+        function renderPrintButton(tab) {
+            const printButton = document.createElement('button');
+            printButton.id = `print-btn-${tab.id}`;
+            printButton.className = 'btn-3d mb-4';
+            printButton.disabled = true;
+            printButton.innerHTML = `<div class="loader w-5 h-5 border-2 border-t-blue-500 inline-block mr-2"></div>인쇄 준비 중...`;
+            printButton.onclick = () => handlePrint(tab.id);
+            tab.contentEl.prepend(printButton);
+            safeCreateIcons();
+        }
 
-        function renderBasicInfo(data, imageUrl) {
+        function renderBasicInfo(data, imageUrl, container) {
             const html = `
                 <div class="card p-6">
                     <div class="flex flex-col md:flex-row items-center gap-6">
@@ -561,11 +632,11 @@
                     </div>
                 </div>
             `;
-            contentContainer.insertAdjacentHTML('beforeend', html);
+            container.insertAdjacentHTML('beforeend', html);
             safeCreateIcons();
         }
 
-        function renderEpisode(episode, imageUrl) {
+        function renderEpisode(episode, imageUrl, container) {
             const html = `
                 <div class="card p-6">
                     <h3 class="text-2xl font-bold mb-4 flex items-center"><i data-lucide="sparkles" class="mr-2 text-yellow-500"></i>재미있는 에피소드</h3>
@@ -586,16 +657,16 @@
                     </div>
                 </div>
             `;
-            contentContainer.insertAdjacentHTML('beforeend', html);
+            container.insertAdjacentHTML('beforeend', html);
             safeCreateIcons();
         }
 
-        function renderDeepDiveButtonsContainer() {
-            const container = document.createElement('div');
-            container.id = 'deep-dive-buttons';
-            container.className = 'card p-6 grid grid-cols-1 sm:grid-cols-2 gap-4';
-            contentContainer.appendChild(container);
-            return container;
+        function renderDeepDiveButtonsContainer(container) {
+            const btnContainer = document.createElement('div');
+            btnContainer.id = 'deep-dive-buttons';
+            btnContainer.className = 'card p-6 grid grid-cols-1 sm:grid-cols-2 gap-4';
+            container.appendChild(btnContainer);
+            return btnContainer;
         }
 
         function appendConceptTreeButton(container, conceptTreeData) {
@@ -616,30 +687,55 @@
             container.prepend(encyclopediaBtn);
         }
 
-        async function renderMeanings(meanings, word, searchId) {
+        async function renderMeanings(meanings, word, searchId, currentTab, mainContainer) {
             const container = document.createElement('div');
             container.className = 'card p-6 space-y-8';
             container.innerHTML = `<h3 class="text-2xl font-bold mb-4 flex items-center"><i data-lucide="book-open-check" class="mr-2 text-green-600"></i>의미 분석</h3>`;
-            contentContainer.appendChild(container);
-
+            mainContainer.appendChild(container);
+        
             for (const [index, meaning] of meanings.entries()) {
-                if(currentSearchId !== searchId) return;
-                
+                if (currentTab.searchId !== searchId) return;
+        
                 const element = document.createElement('div');
                 element.className = 'border-t border-slate-300 pt-6';
-                container.appendChild(element);
-
+                
+                const placeholderImg = "https://placehold.co/300x300/e0e5ec/4a5568?text=Loading...";
+                const imageHtml = `<img id="meaning-image-${index}" src="${placeholderImg}" alt="${meaning.type}" class="rounded-lg shadow-md w-full h-auto object-cover mb-4 max-w-sm mx-auto clickable-image">`;
+                
+                // Fetch image for this specific meaning
+                callImagen(meaning.imagePrompt).then(imageUrl => {
+                    if (currentTab.searchId === searchId) {
+                        // Safely store the URL
+                        if (currentTab.fullSearchResult.meaningsData && currentTab.fullSearchResult.meaningsData[index]) {
+                            currentTab.fullSearchResult.meaningsData[index].imageUrl = imageUrl;
+                        } else {
+                            console.warn(`Could not find meaning data at index ${index} to store imageUrl.`);
+                        }
+                        // Update the UI
+                        const imgEl = mainContainer.querySelector(`#meaning-image-${index}`);
+                        if (imgEl) {
+                             imgEl.src = imageUrl;
+                             imgEl.onclick = () => showImageModal(imageUrl);
+                        }
+                    }
+                }).catch(error => {
+                    console.error(`Failed to load image for meaning ${index}:`, error);
+                });
+        
+                // Fetch examples for this specific meaning
                 const examplesPrompt = `영어 단어 "${word}"의 "${meaning.description}" 의미와 관련된, 현대적이고 유용한 영어 예문 5개와 각각의 한글 번역을 생성해줘. 다음 JSON 형식을 반드시 따라줘:
                 [
                   {"en": "Example sentence 1.", "ko": "예문 1 한글 번역."},
                   {"en": "Example sentence 2.", "ko": "예문 2 한글 번역."}
                 ]`;
                 const examples = await callGemini(examplesPrompt, true);
-                if(currentSearchId !== searchId) return;
-
-                const placeholderImg = "https://placehold.co/300x300/e0e5ec/4a5568?text=Loading...";
-                const imageHtml = `<img id="meaning-image-${index}" src="${placeholderImg}" alt="${meaning.type}" class="rounded-lg shadow-md w-[300px] h-[300px] object-cover float-right ml-6 mb-4 hidden md:block clickable-image">`;
-
+                if (currentTab.searchId !== searchId) return;
+                
+                // Safely store the examples
+                if (currentTab.fullSearchResult.meaningsData && currentTab.fullSearchResult.meaningsData[index]) {
+                    currentTab.fullSearchResult.meaningsData[index].examples = examples;
+                }
+        
                 const examplesHtml = examples.map((ex, i) => `
                     <li class="flex items-start justify-between gap-3 mt-2">
                         <div class="flex items-start">
@@ -650,25 +746,15 @@
                             </div>
                         </div>
                         <div class="flex items-center flex-shrink-0 gap-1">
-                            <button class="icon-btn">
-                                <i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${ex.en.replace(/'/g, "\\'")}', 'en-US')"></i>
-                                <span class="tooltip">영어 듣기</span>
-                            </button>
-                            <button class="icon-btn">
-                                <i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${ex.ko.replace(/'/g, "\\'")}', 'ko-KR')"></i>
-                                <span class="tooltip">한국어 듣기</span>
-                            </button>
-                            <button class="icon-btn">
-                                <i data-lucide="save" class="w-5 h-5" onclick="saveSentence('${ex.en.replace(/'/g, "\\'")}', '${ex.ko.replace(/'/g, "\\'")}')"></i>
-                                <span class="tooltip">저장하기</span>
-                            </button>
+                            <button class="icon-btn"><i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${ex.en.replace(/'/g, "\\'")}', 'en-US')"></i><span class="tooltip">영어 듣기</span></button>
+                            <button class="icon-btn"><i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${ex.ko.replace(/'/g, "\\'")}', 'ko-KR')"></i><span class="tooltip">한국어 듣기</span></button>
+                            <button class="icon-btn"><i data-lucide="save" class="w-5 h-5" onclick="saveSentence('${ex.en.replace(/'/g, "\\'")}', '${ex.ko.replace(/'/g, "\\'")}')"></i><span class="tooltip">저장하기</span></button>
                         </div>
-                    </li>
-                `).join('');
-
+                    </li>`).join('');
+        
                 element.innerHTML = `
-                    ${imageHtml}
                     <h4 class="text-xl font-semibold text-blue-700">${meaning.type}</h4>
+                    ${imageHtml}
                     <p class="text-gray-600 my-2">${meaning.description}</p>
                     <p class="font-medium mt-4 mb-2">대표 예문:</p>
                     <div class="bg-slate-200 p-4 rounded-lg">
@@ -677,28 +763,19 @@
                             <p class="text-md text-gray-600">${meaning.exampleSentenceTranslation}</p>
                         </div>
                         <div class="flex items-center gap-2 mt-2">
-                             <button class="icon-btn">
-                                 <i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${meaning.exampleSentence.replace(/'/g, "\\'")}', 'en-US')"></i>
-                                 <span class="tooltip">영어 듣기</span>
-                             </button>
-                             <button class="icon-btn">
-                                 <i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${meaning.exampleSentenceTranslation.replace(/'/g, "\\'")}', 'ko-KR')"></i>
-                                 <span class="tooltip">한국어 듣기</span>
-                             </button>
-                             <button class="icon-btn">
-                                 <i data-lucide="save" class="w-5 h-5" onclick="saveSentence('${meaning.exampleSentence.replace(/'/g, "\\'")}', '${meaning.exampleSentenceTranslation.replace(/'/g, "\\'")}')"></i>
-                                 <span class="tooltip">저장하기</span>
-                             </button>
+                            <button class="icon-btn"><i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${meaning.exampleSentence.replace(/'/g, "\\'")}', 'en-US')"></i><span class="tooltip">영어 듣기</span></button>
+                            <button class="icon-btn"><i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${meaning.exampleSentenceTranslation.replace(/'/g, "\\'")}', 'ko-KR')"></i><span class="tooltip">한국어 듣기</span></button>
+                            <button class="icon-btn"><i data-lucide="save" class="w-5 h-5" onclick="saveSentence('${meaning.exampleSentence.replace(/'/g, "\\'")}', '${meaning.exampleSentenceTranslation.replace(/'/g, "\\'")}')"></i><span class="tooltip">저장하기</span></button>
                         </div>
                     </div>
                     <p class="font-medium mt-4 mb-2">추가 예문:</p>
-                    <ul class="list-inside space-y-2">${examplesHtml}</ul>
-                `;
+                    <ul class="list-inside space-y-2">${examplesHtml}</ul>`;
+                container.appendChild(element);
             }
             safeCreateIcons();
         }
 
-        function renderDeepDive(data) {
+        function renderDeepDive(data, container) {
              const html = `
                 <div class="card p-6">
                     <h3 class="text-2xl font-bold mb-4 flex items-center"><i data-lucide="graduation-cap" class="mr-2 text-purple-600"></i>심화 학습</h3>
@@ -765,7 +842,7 @@
                     </div>
                 </div>
             `;
-            contentContainer.insertAdjacentHTML('beforeend', html);
+            container.insertAdjacentHTML('beforeend', html);
             safeCreateIcons();
         }
         
@@ -790,7 +867,7 @@
                     <div class="mt-4 bg-slate-200 p-4 rounded-lg" id="quiz-container-${index}">
                         <p class="font-semibold">${index + 1}. ${q.question}</p>
                         <div class="my-2 space-y-1">${optionsHtml}</div>
-                        <button onclick="checkQuizAnswer(${index}, '${q.answer.replace(/'/g, "\\'")}')" class="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">정답 확인</button>
+                        <button onclick="checkQuizAnswer(this, ${index}, '${q.answer.replace(/'/g, "\\'")}')" class="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 quiz-button">정답 확인</button>
                         <div id="quiz-explanation-${index}" class="hidden mt-2 p-2 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700">
                            <p><strong class="font-bold">정답: ${q.answer}</strong></p>
                            <p>${q.explanation}</p>
@@ -805,9 +882,9 @@
         // ---------------------------
         // 4. UI/UX 및 편의 기능
         // ---------------------------
-
-        window.checkQuizAnswer = function(index, correctAnswer) {
-            const container = document.getElementById(`quiz-container-${index}`);
+        
+        window.checkQuizAnswer = function(button, index, correctAnswer) {
+            const container = button.closest(`#quiz-container-${index}`);
             const selected = container.querySelector(`input[name="quiz-${index}"]:checked`);
             if (!selected) {
                 showToast("답을 선택해주세요.", "warning");
@@ -820,7 +897,7 @@
                 selected.parentElement.classList.add('text-red-600', 'font-bold');
                 showToast("오답입니다. 다시 생각해보세요.", "error");
             }
-            document.getElementById(`quiz-explanation-${index}`).classList.remove('hidden');
+            container.querySelector(`#quiz-explanation-${index}`).classList.remove('hidden');
         }
 
         function showLoader(progress, text) {
@@ -868,14 +945,6 @@
             
             setTimeout(() => { toast.className = 'toast'; }, 3000);
         }
-
-        document.body.addEventListener('click', function(event) {
-            if (event.target.classList.contains('clickable-word')) {
-                const word = event.target.textContent.split('(')[0].trim();
-                searchInput.value = word;
-                handleSearch();
-            }
-        });
         
         // ---------------------------
         // 5. 모달 및 툴팁 관련 함수
@@ -973,6 +1042,7 @@
              if (!db || !userId) return;
              const wordRef = doc(db, `artifacts/${firestoreAppId}/users/${userId}/saved_words/${word}`);
              try {
+                // Only save basic info for history, not the full result
                 await setDoc(wordRef, { word, meaning, timestamp: new Date(), read: false }, { merge: true });
              } catch(e){
                  console.error("Error adding word to history: ", e);
@@ -1031,7 +1101,7 @@
             listModalContainer.classList.add('flex');
             
             if (type === 'words') {
-                listModalTitle.textContent = '저장된 단어 목록';
+                listModalTitle.textContent = '단어 목록 (검색 기록)';
                 sortOptions.innerHTML = `
                     <option value="newest">최신순</option>
                     <option value="alphabetical">알파벳순</option>
@@ -1053,7 +1123,9 @@
 
             items.sort((a, b) => {
                 if (!a.timestamp || !b.timestamp) return 0;
-                return b.timestamp.toMillis() - a.timestamp.toMillis();
+                const timeA = a.timestamp.toMillis ? a.timestamp.toMillis() : new Date(a.timestamp).getTime();
+                const timeB = b.timestamp.toMillis ? b.timestamp.toMillis() : new Date(b.timestamp).getTime();
+                return timeB - timeA;
             });
 
             if (currentSort === 'alphabetical' && currentListType === 'words') {
@@ -1078,7 +1150,7 @@
 
                 if (currentListType === 'words') {
                     return baseHtml + `
-                                <p class="font-bold text-lg clickable-word truncate">${item.word}</p>
+                                <p class="font-bold text-lg searchable-list-item cursor-pointer hover:underline" data-word="${item.word}">${item.word}</p>
                                 <p class="truncate">${item.meaning}</p>
                             </div>
                         </div>
@@ -1110,6 +1182,7 @@
         }
         
         window.deleteListItem = async function(id, type) {
+            if (!db || !userId) return;
             const collectionName = type === 'words' ? 'saved_words' : 'saved_sentences';
             const docRef = doc(db, `artifacts/${firestoreAppId}/users/${userId}/${collectionName}/${id}`);
             try {
@@ -1122,6 +1195,7 @@
         }
         
         window.toggleReadStatus = async function(id, type) {
+            if (!db || !userId) return;
             const collectionName = type === 'words' ? 'saved_words' : 'saved_sentences';
             const docRef = doc(db, `artifacts/${firestoreAppId}/users/${userId}/${collectionName}/${id}`);
             try {
@@ -1151,6 +1225,7 @@
         });
 
         async function performBulkAction(action) {
+            if (!db || !userId) return;
             const checkedItems = listModalContent.querySelectorAll('.item-checkbox:checked');
             if (checkedItems.length === 0) {
                 showToast("항목을 선택해주세요.", "warning");
@@ -1177,30 +1252,215 @@
                 showToast("작업에 실패했습니다.", "error");
             }
         }
-
-        document.getElementById('delete-selected-btn').addEventListener('click', () => performBulkAction('delete'));
-        document.getElementById('mark-read-btn').addEventListener('click', () => performBulkAction('mark-read'));
-        document.getElementById('mark-unread-btn').addEventListener('click', () => performBulkAction('mark-unread'));
-
+        
         window.hideListModal = function(event) {
-             if (event && event.currentTarget !== event.target) return;
+             if (event && event.currentTarget !== event.target && !event.target.closest('button')) return;
              listModalContainer.classList.add('hidden');
              listModalContainer.classList.remove('flex');
         }
         
-        sortOptions.addEventListener('change', (e) => {
-            currentSort = e.target.value;
-            renderList();
-        });
+        // ---------------------------
+        // 8. Tab & Print Management
+        // ---------------------------
+
+        function addTab(query, makeActive = true) {
+            const tabId = `tab-${++tabCounter}`;
+            const tabBar = document.getElementById('tab-bar');
+            const tabContentContainer = document.getElementById('tab-content-container');
+
+            const tabButton = document.createElement('button');
+            tabButton.id = `tab-btn-${tabId}`;
+            tabButton.className = 'px-4 py-2 -mb-px border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-400 flex items-center';
+            tabButton.dataset.tabId = tabId;
+            tabButton.innerHTML = `
+                <span class="tab-title">${query.length > 10 ? query.substring(0, 10) + '...' : query}</span>
+                <span class="close-tab-btn ml-2 hover:bg-red-200 rounded-full w-4 h-4 flex items-center justify-center text-xs font-bold">&times;</span>
+            `;
+            tabBar.appendChild(tabButton);
+            
+            const tabContent = document.createElement('div');
+            tabContent.id = `tab-content-${tabId}`;
+            tabContent.className = 'space-y-8';
+            tabContentContainer.appendChild(tabContent);
+
+            tabs[tabId] = { id: tabId, query, contentEl: tabContent, buttonEl: tabButton, searchId: 0, fullSearchResult: null };
+
+            tabButton.addEventListener('click', () => switchTab(tabId));
+            tabButton.querySelector('.close-tab-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeTab(tabId);
+            });
+
+            if (makeActive) {
+                switchTab(tabId);
+            }
+
+            return tabId;
+        }
+
+        function switchTab(tabId) {
+            if (!tabs[tabId]) return;
+            activeTabId = tabId;
+            
+            for (const id in tabs) {
+                tabs[id].buttonEl.classList.remove('border-blue-500', 'text-gray-900', 'font-semibold');
+                tabs[id].buttonEl.classList.add('border-transparent', 'text-gray-500');
+                tabs[id].contentEl.classList.add('hidden');
+            }
+            
+            tabs[tabId].buttonEl.classList.add('border-blue-500', 'text-gray-900', 'font-semibold');
+            tabs[tabId].buttonEl.classList.remove('border-transparent', 'text-gray-500');
+            tabs[tabId].contentEl.classList.remove('hidden');
+        }
+
+        function closeTab(tabId) {
+            if (!tabs[tabId]) return;
+
+            tabs[tabId].buttonEl.remove();
+            tabs[tabId].contentEl.remove();
+            delete tabs[tabId];
+
+            if (activeTabId === tabId) {
+                const remainingTabIds = Object.keys(tabs);
+                if (remainingTabIds.length > 0) {
+                    switchTab(remainingTabIds[remainingTabIds.length - 1]);
+                } else {
+                    activeTabId = null;
+                }
+            }
+        }
+
+        function handlePrint(tabId) {
+            const tab = tabs[tabId];
+            const data = tab.fullSearchResult;
+            if (!data || !data.encyclopediaData) {
+                showToast("인쇄 데이터가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.", "warning");
+                return;
+            }
+
+            const printHtml = generatePrintableHtml(data);
+            
+            const printFrame = document.createElement('iframe');
+            printFrame.style.position = 'absolute';
+            printFrame.style.width = '0';
+            printFrame.style.height = '0';
+            printFrame.style.border = '0';
+            document.body.appendChild(printFrame);
+            
+            const frameDoc = printFrame.contentWindow.document;
+            frameDoc.open();
+            frameDoc.write(printHtml);
+            frameDoc.close();
+            
+            setTimeout(() => {
+                try {
+                    printFrame.contentWindow.focus();
+                    printFrame.contentWindow.print();
+                } catch(e) {
+                    console.error("Print failed:", e);
+                    showToast("인쇄에 실패했습니다. 팝업 차단을 확인해주세요.", "error");
+                } finally {
+                     document.body.removeChild(printFrame);
+                }
+            }, 500);
+        }
+
+        function generatePrintableHtml(data) {
+            const { initialData, mainImageUrl, episodeImageUrl, meaningsData, fastDeepDiveData, encyclopediaData } = data;
+
+            const renderPrintSection = (title, content) => {
+                if (!content) return '';
+                return `<div style="margin-top: 2rem; page-break-inside: avoid;"><h2 style="font-size: 1.5rem; font-weight: bold; border-bottom: 2px solid #ccc; padding-bottom: 0.5rem; margin-bottom: 1rem;">${title}</h2>${content}</div>`;
+            };
+
+            const basicInfoHtml = `
+                <div style="display: flex; align-items: center; gap: 2rem;">
+                    <img src="${mainImageUrl || ''}" style="width: 200px; height: auto; border-radius: 8px;">
+                    <div>
+                        <p style="font-size: 2rem; font-weight: bold;">${initialData.word}</p>
+                        <p style="font-size: 1.5rem;">${initialData.koreanMeaning}</p>
+                        <p style="font-size: 1.2rem; color: #555;">[${initialData.pronunciation}]</p>
+                    </div>
+                </div>`;
+
+            const episodeHtml = `<img src="${episodeImageUrl || ''}" style="max-width: 400px; display: block; margin: 1rem auto; border-radius: 8px;"><p><b>(영문)</b> ${initialData.episode.story}</p><p><b>(한글)</b> ${initialData.episode.story_ko}</p>`;
+            
+            const meaningsHtml = (meaningsData || []).map(m => `
+                    <div style="margin-top: 1rem; page-break-inside: avoid;">
+                        <h4 style="font-size: 1.2rem; font-weight: bold; color: #005a9c;">${m.type}</h4>
+                        <img src="${m.imageUrl || ''}" style="max-width: 400px; display: block; margin: 1rem auto; border-radius: 8px;">
+                        <p>${m.description}</p>
+                        <div style="background-color: #f0f0f0; padding: 1rem; border-radius: 5px; margin: 0.5rem 0;">
+                            <p><b>대표 예문:</b> ${m.exampleSentence}</p>
+                            <p><em>${m.exampleSentenceTranslation}</em></p>
+                        </div>
+                        <ul style="list-style-position: inside; padding-left: 0;">
+                            ${(m.examples || []).map(ex => `<li><b>${ex.en}</b><br><em>${ex.ko}</em></li>`).join('')}
+                        </ul>
+                    </div>
+                `).join('<hr style="border: 0; border-top: 1px solid #ddd; margin: 1rem 0;">');
+
+            const quotesHtml = (fastDeepDiveData.quotes || []).map(q => `<div style="border-left: 3px solid #ccc; padding-left: 1rem; margin-bottom: 1rem;"><p><b>"${q.quote}"</b></p><p><em>${q.translation}</em></p></div>`).join('');
+            const synAntHtml = `<div><h4>유의어</h4><p>${(fastDeepDiveData.synonyms || []).join(', ')}</p></div><div><h4>반의어</h4><p>${(fastDeepDiveData.antonyms || []).join(', ')}</p></div>`;
+            const dialogueHtml = (fastDeepDiveData.dialogue || []).map(d => `<p><b>${d.speaker}:</b> ${d.line} <br><em>${d.translation}</em></p>`).join('');
+            const quizHtml = (fastDeepDiveData.quiz || []).map(q => `
+                <div style="margin-top: 1rem;">
+                    <p><b>문제: ${q.question}</b></p>
+                    <ul>${(q.options || []).map(o => `<li>${o}</li>`).join('')}</ul>
+                    <p><b>정답:</b> ${q.answer}</p>
+                    <p><b>해설:</b> ${q.explanation}</p>
+                </div>
+            `).join('');
+
+            const fullDeepDiveHtml = renderPrintSection('관련 명언/문구', quotesHtml) + renderPrintSection('유의어 및 반의어', synAntHtml) + renderPrintSection('AI 시나리오 학습', dialogueHtml) + renderPrintSection('4지선다 퀴즈', quizHtml);
+
+            const conceptTreeData = fastDeepDiveData.conceptTree || {};
+            const createConceptList = (title, items) => {
+                if (!items || items.length === 0) return '';
+                return `<div><h4 style="font-weight: bold; margin-top: 1rem;">${title}</h4><p>${items.join(', ')}</p></div>`;
+            };
+            const conceptTreeHtml = createConceptList('상위 개념', conceptTreeData.superordinate) + createConceptList('동위 개념', conceptTreeData.coordinate) + createConceptList('하위 개념', conceptTreeData.subordinate);
+
+            const encData = encyclopediaData.encyclopedia || {};
+            const encyclopediaHtml = `
+                <div>
+                    <h3 style="font-size: 1.2rem; font-weight: bold; margin-top: 1.5rem;">서론 (Introduction)</h3><p>${(encData.introduction_ko || '').replace(/\n/g, '<br>')}</p>
+                    <h3 style="font-size: 1.2rem; font-weight: bold; margin-top: 1.5rem;">어원 (Etymology)</h3><p>${(encData.etymology_ko || '').replace(/\n/g, '<br>')}</p>
+                    <h3 style="font-size: 1.2rem; font-weight: bold; margin-top: 1.5rem;">역사적 배경 (Historical Background)</h3><p>${(encData.history_ko || '').replace(/\n/g, '<br>')}</p>
+                    <h3 style="font-size: 1.2rem; font-weight: bold; margin-top: 1.5rem;">문학/현대에서의 사용 (Usage)</h3><p>${(encData.usage_ko || '').replace(/\n/g, '<br>')}</p>
+                </div>`;
+
+            return `<!DOCTYPE html><html><head><title>Print - ${initialData.word}</title>
+                <style>
+                    body { font-family: 'Noto Sans KR', sans-serif; line-height: 1.6; color: #333; }
+                    h1, h2, h3, h4 { font-weight: bold; }
+                    img { max-width: 400px; height: auto; border-radius: 8px; margin: 1rem auto; display: block; page-break-inside: avoid; }
+                    .page-break { page-break-before: always; }
+                    @media print { body { font-family: 'Times New Roman', serif; } }
+                </style>
+                <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+                </head><body>
+                    <h1 style="font-size: 3rem; text-align: center;">${initialData.word}</h1><hr>
+                    ${renderPrintSection('기본 정보', basicInfoHtml)}
+                    ${renderPrintSection('재미있는 에피소드', episodeHtml)}
+                    ${renderPrintSection('의미 분석', meaningsHtml)}
+                    <div class="page-break"></div>
+                    ${renderPrintSection('심화 학습', fullDeepDiveHtml)}
+                    <div class="page-break"></div>
+                    ${renderPrintSection('개념 트리', conceptTreeHtml)}
+                    ${renderPrintSection('백과사전식 설명', encyclopediaHtml)}
+                </body></html>`;
+        }
+
 
         // ---------------------------
-        // 8. 이벤트 리스너
+        // 9. 이벤트 리스너
         // ---------------------------
         
-        searchButton.addEventListener('click', handleSearch);
+        searchButton.addEventListener('click', () => handleSearch(searchInput.value));
         searchInput.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
-                handleSearch();
+                handleSearch(searchInput.value);
             }
         });
         
@@ -1214,8 +1474,44 @@
             });
         });
         
+        document.body.addEventListener('click', function(event) {
+            if (event.target.classList.contains('clickable-word') && !event.target.closest('#list-modal-container')) {
+                const word = event.target.textContent.split('(')[0].trim();
+                searchInput.value = word;
+                handleSearch(word);
+            }
+        });
+
+        listModalContainer.addEventListener('click', (e) => {
+            const targetWordItem = e.target.closest('.searchable-list-item');
+            
+            if (targetWordItem) {
+                const word = targetWordItem.dataset.word;
+                if (word) {
+                    hideListModal(e);
+                    searchInput.value = word;
+                    handleSearch(word);
+                }
+            } else if (e.target.classList.contains('clickable-word')) {
+                 const word = e.target.textContent.split('(')[0].trim();
+                 if (word) {
+                    hideListModal(e);
+                    searchInput.value = word;
+                    handleSearch(word);
+                 }
+            }
+        });
+
+        sortOptions.addEventListener('change', (e) => {
+            currentSort = e.target.value;
+            renderList();
+        });
+        document.getElementById('delete-selected-btn').addEventListener('click', () => performBulkAction('delete'));
+        document.getElementById('mark-read-btn').addEventListener('click', () => performBulkAction('mark-read'));
+        document.getElementById('mark-unread-btn').addEventListener('click', () => performBulkAction('mark-unread'));
+        
         // ---------------------------
-        // 9. 앱 초기화 및 툴팁
+        // 10. 앱 초기화 및 툴팁
         // ---------------------------
         
         function safeCreateIcons() {
@@ -1228,12 +1524,6 @@
         
         document.addEventListener('DOMContentLoaded', () => {
             safeCreateIcons();
-
-            const alpineScript = document.createElement('script');
-            alpineScript.src = 'https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.min.js';
-            alpineScript.defer = true;
-            document.head.appendChild(alpineScript);
-            
             initializeFirebase();
 
             document.body.addEventListener('mouseover', async (event) => {
@@ -1277,10 +1567,11 @@
             const queryFromUrl = urlParams.get('q');
             if (queryFromUrl) {
                 searchInput.value = decodeURIComponent(queryFromUrl);
-                handleSearch();
+                handleSearch(searchInput.value);
             }
         });
     </script>
 </body>
 </html>
 
+           
