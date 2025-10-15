@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Vocabulary Builder</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Noto Sans KR -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide-react@0.292.0/dist/lucide-react.js"></script>
+    <script src="https://unpkg.com/lucide-icons@0.378.0/dist/lucide.min.js"></script>
+
+    <style>
+        /* Noto Sans KR 폰트 전역 적용 */
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f0f2f5; /* 눈이 편안한 은색 배경 */
+        }
+
+        /* 입체적인 텍스처(볼록 효과) 버튼 스타일 */
+        .btn-3d {
+            background-color: #e0e5ec;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 24px;
+            font-weight: 600;
+            color: #4a5568;
+            box-shadow: 6px 6px 12px #c5c9d2, -6px -6px 12px #fdffff;
+            transition: all 0.2s ease-in-out;
+            outline: none;
+        }
+
+        .btn-3d:hover {
+            box-shadow: 4px 4px 8px #c5c9d2, -4px -4px 8px #fdffff;
+        }
+
+        .btn-3d:active {
+            box-shadow: inset 4px 4px 8px #c5c9d2, inset -4px -4px 8px #fdffff;
+        }
+        
+        /* 카드 디자인 */
+        .card {
+            background-color: #e0e5ec;
+            border-radius: 15px;
+            box-shadow: 8px 8px 16px #c5c9d2, -8px -8px 16px #fdffff;
+        }
+
+        /* 클릭 투 서치 스타일 */
+        .clickable-word {
+            cursor: pointer;
+            font-weight: 500;
+            color: #2b6cb0;
+            transition: color 0.2s;
+            border-bottom: 1px dotted #2b6cb0;
+        }
+        .clickable-word:hover {
+            color: #2c5282;
+            background-color: #bee3f8;
+        }
+        
+        /* 로딩 스피너 */
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 모달 스타일 */
+        .modal {
+            transition: opacity 0.3s ease;
+        }
+        
+        /* 토스트 메시지 스타일 */
+        .toast {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.5s, visibility 0.5s, bottom 0.5s;
+        }
+        .toast.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .clickable-image {
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out;
+        }
+        .clickable-image:hover {
+            transform: scale(1.03);
+        }
+
+        .icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.25rem; /* 36px */
+            height: 2.25rem; /* 36px */
+            border-radius: 9999px;
+            background-color: #e2e8f0;
+            transition: all 0.2s;
+            color: #4a5568;
+            box-shadow: 3px 3px 6px #c5c9d2, -3px -3px 6px #fdffff;
+            position: relative; /* For tooltip positioning */
+        }
+        .icon-btn:hover {
+            color: #1a202c;
+            box-shadow: 2px 2px 4px #c5c9d2, -2px -2px 4px #fdffff;
+        }
+        .icon-btn:active {
+             box-shadow: inset 2px 2px 4px #c5c9d2, inset -2px -2px 4px #fdffff;
+        }
+        
+        /* Tooltip styles */
+        .tooltip {
+            visibility: hidden;
+            opacity: 0;
+            background-color: #2d3748;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 10px;
+            position: absolute;
+            z-index: 10;
+            bottom: 125%; /* Position above the button */
+            left: 50%;
+            transform: translateX(-50%);
+            transition: opacity 0.2s;
+            white-space: nowrap;
+            font-size: 0.75rem;
+        }
+
+        .icon-btn:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+    </style>
+</head>
+<body class="bg-slate-100 text-gray-800">
+    <div id="app" class="max-w-4xl mx-auto p-4 pb-24">
+        <!-- 헤더 -->
+        <header class="text-center my-8">
+            <h1 class="text-4xl font-bold text-gray-700" style="text-shadow: 2px 2px 4px #d1d9e6;">AI Vocabulary Builder</h1>
+            <p class="text-gray-500 mt-2">AI와 함께 단어의 모든 것을 탐험하세요</p>
+        </header>
+
+        <!-- 검색창 -->
+        <div class="card p-6 mb-8 sticky top-4 z-10">
+            <div class="flex flex-col sm:flex-row gap-4">
+                <input type="text" id="search-input" placeholder="영단어 또는 한글 뜻을 입력하세요..." class="w-full px-4 py-3 text-lg border-2 border-slate-300 bg-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                <button id="search-button" class="btn-3d w-full sm:w-auto">
+                    <i data-lucide="search" class="inline-block mr-2"></i> 검색
+                </button>
+            </div>
+        </div>
+
+        <!-- 로딩 상태 표시줄 -->
+        <div id="loading-container" class="hidden text-center my-10">
+             <div class="loader mx-auto"></div>
+             <p id="loading-text" class="mt-4 text-gray-600 font-semibold"></p>
+             <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                 <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+             </div>
+        </div>
+        
+        <!-- 콘텐츠 영역 -->
+        <main id="content-container" class="space-y-8"></main>
+
+        <!-- 고정 하단 메뉴 -->
+        <footer class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm shadow-t border-t-2 border-slate-200 z-50">
+            <div class="max-w-4xl mx-auto flex justify-around p-2">
+                <button id="word-list-btn" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition-colors">
+                    <i data-lucide="list-checks"></i>
+                    <span class="text-xs font-medium">단어 목록</span>
+                </button>
+                <button id="sentence-list-btn" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition-colors">
+                    <i data-lucide="save-all"></i>
+                    <span class="text-xs font-medium">예문 저장</span>
+                </button>
+                <button id="share-btn" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition-colors">
+                    <i data-lucide="share-2"></i>
+                    <span class="text-xs font-medium">공유하기</span>
+                </button>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- 콘텐츠 모달 -->
+    <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center p-4 z-50 modal" onclick="hideModal(event)">
+        <div id="modal-content" class="bg-slate-100 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 card" onclick="event.stopPropagation()">
+            <!-- 모달 내용이 여기에 삽입됩니다 -->
+        </div>
+    </div>
+    
+    <!-- 이미지 모달 -->
+    <div id="image-modal-container" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center p-4 z-[60] modal" onclick="hideImageModal()">
+        <img id="modal-image" src="" class="max-w-full max-h-full object-contain rounded-lg" onclick="event.stopPropagation()">
+        <button onclick="hideImageModal()" class="absolute top-4 right-4 text-white hover:text-gray-300 transition" aria-label="Close image view">
+            <i data-lucide="x" class="w-10 h-10"></i>
+        </button>
+    </div>
+
+    <!-- 저장된 단어/예문 목록 모달 -->
+    <div id="list-modal-container" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center p-4 z-50 modal" onclick="hideListModal(event)">
+        <div class="bg-slate-100 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col card" onclick="event.stopPropagation()">
+            <div id="list-modal-header" class="p-4 border-b border-slate-300 flex justify-between items-center">
+                <h2 id="list-modal-title" class="text-xl font-bold"></h2>
+                <button onclick="hideListModal()" class="text-gray-500 hover:text-gray-800"><i data-lucide="x"></i></button>
+            </div>
+             <div class="p-4 flex flex-wrap gap-2 justify-between items-center bg-slate-200 border-b border-slate-300">
+                <div>
+                    <select id="sort-options" class="px-3 py-1.5 border border-slate-300 rounded-md bg-white">
+                        <!-- 정렬 옵션 -->
+                    </select>
+                </div>
+                <div id="list-actions" class="flex flex-wrap gap-2">
+                    <button id="mark-read-btn" class="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:bg-gray-400" disabled>읽음으로</button>
+                    <button id="mark-unread-btn" class="text-sm bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 disabled:bg-gray-400" disabled>읽지 않음으로</button>
+                    <button id="delete-selected-btn" class="text-sm bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:bg-gray-400" disabled>선택 삭제</button>
+                </div>
+            </div>
+            <div id="list-modal-content" class="p-6 overflow-y-auto flex-grow">
+                <!-- 목록 내용 -->
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 토스트 메시지 -->
+    <div id="toast-container" class="toast fixed bottom-24 right-5 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg">
+        <p id="toast-message"></p>
+    </div>
+
+    <!-- 실시간 번역 툴팁 -->
+    <div id="word-tooltip" class="hidden absolute z-[100] px-3 py-1.5 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-sm"></div>
+
+
+    <!-- Firebase SDK and custom script -->
+    <script type="module">
+        // Firebase SDK imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, addDoc, deleteDoc, query, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ---------------------------
+        // 0. 초기 설정 및 변수 선언
+        // ---------------------------
+        const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+        const contentContainer = document.getElementById('content-container');
+        const loadingContainer = document.getElementById('loading-container');
+        const loadingText = document.getElementById('loading-text');
+        const progressBar = document.getElementById('progress-bar');
+        
+        // API 엔드포인트와 키 (보안을 위해 실제 환경에서는 서버에서 관리해야 합니다)
+        const apiKey = ""; // API 키는 fetch 호출 시 환경에 의해 자동으로 제공됩니다.
+        const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent`;
+        const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict`;
+        
+        let currentSearchId = 0; // 비동기 충돌 방지를 위한 ID
+        const translationCache = {}; // 실시간 번역 캐시
+
+        // Firebase 설정
+        let db, auth, userId, app;
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        
+        // Firestore 데이터베이스 초기화 및 익명 로그인
+        async function initializeFirebase() {
+            try {
+                 if (typeof __firebase_config === 'undefined') {
+                    console.error("Firebase config is not available.");
+                    showToast("서비스 초기화에 실패했습니다.", "error");
+                    return;
+                }
+                const firebaseConfig = JSON.parse(__firebase_config);
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                setLogLevel('error');
+
+                onAuthStateChanged(auth, user => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("Authenticated User ID:", userId);
+                        loadUserLists(); // 인증 후 사용자 목록 로드
+                    } else {
+                        console.log("User not signed in.");
+                    }
+                });
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Firebase Initialization Error: ", error);
+                showToast("데이터베이스 연결에 실패했습니다.", "error");
+            }
+        }
+
+        // ---------------------------
+        // 1. API 통신 함수
+        // ---------------------------
+
+        /**
+         * API 호출을 재시도 로직과 함께 실행합니다.
+         * @param {string} url - API URL
+         * @param {object} payload - API 요청 본문
+         * @param {number} retries - 최대 재시도 횟수
+         * @returns {Promise<object>} - API 응답 데이터
+         */
+        async function fetchWithRetry(url, payload, retries = 3) {
+            const finalUrl = `${url}?key=${apiKey}`;
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(finalUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) {
+                        const errorBody = await response.text();
+                        throw new Error(`HTTP error! status: ${response.status}, body: ${errorBody}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error(`Attempt ${i + 1} failed:`, error);
+                    if (i === retries - 1) {
+                         showToast("AI 서버 응답에 실패했습니다. 잠시 후 다시 시도해주세요.", "error");
+                         throw error;
+                    }
+                    await new Promise(res => setTimeout(res, 1000 * (i + 1))); // Exponential backoff
+                }
+            }
+        }
+
+        /**
+         * Gemini 텍스트 생성 API 호출
+         * @param {string} prompt - Gemini에 전달할 프롬프트
+         * @param {boolean} isJson - JSON 형식의 응답을 기대하는지 여부
+         * @returns {Promise<string|object>} - 생성된 텍스트 또는 JSON 객체
+         */
+        async function callGemini(prompt, isJson = false) {
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+            };
+            if(isJson){
+                payload.generationConfig = { responseMimeType: "application/json" };
+            }
+            
+            const result = await fetchWithRetry(textApiUrl, payload);
+            const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            if(!text) throw new Error("Gemini API response is empty.");
+
+            return isJson ? JSON.parse(text) : text;
+        }
+
+        /**
+         * Imagen 이미지 생성 API 호출
+         * @param {string} prompt - Imagen에 전달할 프롬프트
+         * @returns {Promise<string>} - 생성된 이미지의 Base64 데이터 URL
+         */
+        async function callImagen(prompt) {
+             const payload = { 
+                instances: [{ prompt: prompt }],
+                parameters: { sampleCount: 1 }
+             };
+            const result = await fetchWithRetry(imageApiUrl, payload);
+            const base64Data = result.predictions?.[0]?.bytesBase64Encoded;
+            if (!base64Data) {
+                console.error("Imagen API response is empty or invalid. Full response:", result);
+                return `https://placehold.co/300x300/e0e5ec/4a5568?text=Image+Generation+Failed`;
+            }
+            return `data:image/png;base64,${base64Data}`;
+        }
+        
+        // ---------------------------
+        // 2. 핵심 로직: 검색 및 콘텐츠 생성
+        // ---------------------------
+
+        async function handleSearch() {
+            const query = searchInput.value.trim();
+            if (!query) {
+                showToast("검색어를 입력해주세요.", "warning");
+                return;
+            }
+
+            const searchId = ++currentSearchId;
+
+            contentContainer.innerHTML = '';
+            showLoader(0, "검색을 시작합니다...");
+            searchButton.disabled = true;
+
+            try {
+                // --- STEP 1: Fetch and render basic info FIRST ---
+                updateLoader(10, "기본 정보 생성 중...");
+                const initialInfoPrompt = `영어 단어 "${query}"에 대한 종합적인 정보를 생성해줘. 다음 JSON 형식을 반드시 따라줘:
+                {
+                  "word": "실제 영어 단어",
+                  "koreanMeaning": "대표적인 한글 뜻",
+                  "pronunciation": "발음 기호",
+                  "mainImagePrompt": "단어를 함축적으로 표현하는, 예술적이고 상세한 이미지 생성을 위한 영어 프롬프트. 예: 'brain' -> 'A hyper-realistic, detailed anatomical illustration of the human brain, showing different lobes with glowing neural pathways, artistic style.'",
+                  "episode": {
+                    "story": "단어를 쉽게 기억할 수 있는 매우 웃기고 재미있는 짧은 이야기 (3~4 문장).",
+                    "story_ko": "위 이야기의 자연스러운 한글 번역.",
+                    "imagePrompt": "이야기 내용에 맞는, 밝고 유머러스한 만화 스타일의 이미지 생성을 위한 영어 프롬프트. 예: 'Dr. Slump' 만화 스타일."
+                  }
+                }`;
+                const initialData = await callGemini(initialInfoPrompt, true);
+                if (searchId !== currentSearchId) return;
+
+                updateLoader(25, "기본 정보 표시 중...");
+                const placeholderImg = "https://placehold.co/300x300/e0e5ec/4a5568?text=Loading...";
+                renderBasicInfo(initialData, placeholderImg);
+                renderEpisode(initialData.episode, placeholderImg);
+                addWordToHistory(initialData.word, initialData.koreanMeaning);
+
+                // --- STEP 2: Start fetching primary images in the background (no await) ---
+                callImagen(initialData.mainImagePrompt).then(imageUrl => {
+                    if (searchId === currentSearchId) {
+                        const imgEl = document.getElementById('main-image');
+                        if (imgEl) {
+                            imgEl.src = imageUrl;
+                            imgEl.onclick = () => showImageModal(imageUrl);
+                        }
+                    }
+                });
+                callImagen(initialData.episode.imagePrompt).then(imageUrl => {
+                     if (searchId === currentSearchId) {
+                        const imgEl = document.getElementById('episode-image');
+                        if (imgEl) {
+                            imgEl.src = imageUrl;
+                            imgEl.onclick = () => showImageModal(imageUrl);
+                        }
+                    }
+                });
+                
+                // --- STEP 3: Fetch Meanings data ---
+                updateLoader(40, "의미 분석 생성 중...");
+                 const meaningsPrompt = `영어 단어 "${initialData.word}"의 의미를 분석해줘. 핵심 의미, 부가적 의미, 숙어 표현 각각에 대해 설명과 대표 예문, 그리고 그 예문에 맞는 'Dr. Slump' 스타일의 재미있는 삽화 프롬프트를 생성해줘. 다음 JSON 형식을 반드시 따라줘:
+                [
+                  { "type": "핵심 의미", "description": "핵심 의미에 대한 자세한 한글 설명.", "exampleSentence": "의미를 가장 잘 나타내는 현대적이고 일반적인 영어 예문.", "exampleSentenceTranslation": "위 예문의 한글 번역.", "imagePrompt": "위 예문 내용을 기반으로, 'Dr.slump' 만화 스타일의 재미있는 삽화 생성을 위한 영어 프롬프트. 인물 표정은 다양하고 재미있게." },
+                  { "type": "부가적 의미", "description": "부가적, 비유적, 확장된 의미에 대한 한글 설명.", "exampleSentence": "해당 의미를 보여주는 창의적인 영어 예문.", "exampleSentenceTranslation": "위 예문의 한글 번역.", "imagePrompt": "위 예문 내용을 기반으로 한 삽화 프롬프트." },
+                  { "type": "숙어 표현", "description": "단어가 포함된 중요 숙어와 그 의미에 대한 한글 설명.", "exampleSentence": "숙어가 사용된 자연스러운 영어 예문.", "exampleSentenceTranslation": "위 예문의 한글 번역.", "imagePrompt": "위 예문 내용을 기반으로 한 삽화 프롬프트." }
+                ]`;
+                const meaningsData = await callGemini(meaningsPrompt, true);
+                if (searchId !== currentSearchId) return;
+
+                // --- STEP 4: Render Meanings text content and start fetching images ---
+                await renderMeanings(meaningsData, initialData.word, searchId);
+                 meaningsData.forEach((meaning, index) => {
+                    callImagen(meaning.imagePrompt).then(imageUrl => {
+                        if (searchId === currentSearchId) {
+                            const imgEl = document.getElementById(`meaning-image-${index}`);
+                            if (imgEl) {
+                                imgEl.src = imageUrl;
+                                imgEl.onclick = () => showImageModal(imageUrl);
+                            }
+                        }
+                    });
+                });
+
+                // --- STEP 5: Fetch and FAST Deep Dive content ---
+                 updateLoader(75, "심화 학습 정보 생성 중...");
+                const fastDeepDivePrompt = `영어 단어 "${initialData.word}"에 대한 심화 학습 콘텐츠를 생성해줘. "encyclopedia"는 제외하고 다음 JSON 형식을 반드시 따라줘:
+                {
+                  "quotes": [
+                    {"quote": "관련 명언/유명 문구 1", "translation": "한글 번역"},
+                    {"quote": "관련 명언/유명 문구 2", "translation": "한글 번역"},
+                    {"quote": "관련 명언/유명 문구 3", "translation": "한글 번역"}
+                  ],
+                  "synonyms": ["유의어1(뜻1)", "유의어2(뜻2)", "유의어3(뜻3)"],
+                  "antonyms": ["반의어1(뜻1)", "반의어2(뜻2)"],
+                  "conceptTree": { "superordinate": ["상위 개념 (영어(한글))"], "coordinate": ["동위 개념 1 (영어(한글))", "...(총 10개)"], "subordinate": ["하위 개념 1 (영어(한글))", "...(총 20개)"] },
+                  "dialogue": [ 
+                      {"speaker": "A", "line": "대화 문장 1 (영어)", "translation": "대화 문장 1 (한글)"}, 
+                      {"speaker": "B", "line": "대화 문장 2 (영어)", "translation": "대화 문장 2 (한글)"}
+                  ],
+                  "quiz": [
+                    { "question": "난이도 높은 4지선다 퀴즈 문제 1", "options": ["선택지 A", "선택지 B", "선택지 C", "선택지 D"], "answer": "정답 선택지", "explanation": "정답에 대한 상세한 한글 해설. 퀴즈 문제 문장에 대한 한글 해석을 반드시 포함해야 합니다." }
+                  ]
+                }`;
+                const fastDeepDiveData = await callGemini(fastDeepDivePrompt, true);
+                if (searchId !== currentSearchId) return;
+                
+                updateLoader(90, "심화 정보 표시 중...");
+                const buttonContainer = renderDeepDiveButtonsContainer();
+                appendConceptTreeButton(buttonContainer, fastDeepDiveData.conceptTree);
+                renderDeepDive(fastDeepDiveData);
+                hideLoader();
+                showToast("핵심 정보 로딩 완료! 백과사전 정보를 생성합니다...", "info");
+
+                // --- STEP 6: Fetch and append SLOW Encyclopedia content LAST (in background) ---
+                const encyclopediaPrompt = `영어 단어 "${initialData.word}"에 대한 백과사전식 설명을 생성해줘. A4 용지 3장 분량에 준하는 상세한 내용이어야 하며, '어원', '역사적 배경', '문학/현대에서의 사용' 섹션을 포함하여 구조화해줘. 다음 JSON 형식만 따라줘:
+                { 
+                  "encyclopedia": { 
+                    "introduction": "상세한 서론 (영어, 여러 문단)", "etymology": "깊이 있는 어원 분석 (영어, 여러 문단)", "history": "포괄적인 역사적 배경과 변화 과정 (영어, 여러 문단)", "usage": "문학, 현대 미디어, 일상에서의 사용 예시 (영어, 여러 문단)",
+                    "introduction_ko": "위 내용의 한글 번역", "etymology_ko": "위 내용의 한글 번역", "history_ko": "위 내용의 한글 번역", "usage_ko": "위 내용의 한글 번역"
+                  }
+                }`;
+                callGemini(encyclopediaPrompt, true).then(encyclopediaFullData => {
+                    if (searchId === currentSearchId) {
+                        appendEncyclopediaButton(buttonContainer, encyclopediaFullData.encyclopedia);
+                        showToast("모든 콘텐츠 생성이 완료되었습니다!", "success");
+                    }
+                }).catch(error => {
+                    console.error("Failed to fetch encyclopedia data:", error);
+                    showToast("백과사전 정보 생성에 실패했습니다.", "error");
+                });
+                
+            } catch (error) {
+                console.error("Search failed:", error);
+                showToast("콘텐츠 생성 중 오류가 발생했습니다.", "error");
+                hideLoader();
+                contentContainer.innerHTML = `<div class="card p-8 text-center text-red-500">
+                    <p>검색 결과를 불러오는 데 실패했습니다.</p>
+                    <p class="text-sm text-gray-500 mt-2">존재하지 않는 단어이거나, 네트워크 문제일 수 있습니다.</p>
+                </div>`;
+            } finally {
+                searchButton.disabled = false;
+            }
+        }
+
+        // ---------------------------
+        // 3. 렌더링 함수
+        // ---------------------------
+
+        function renderBasicInfo(data, imageUrl) {
+            const html = `
+                <div class="card p-6">
+                    <div class="flex flex-col md:flex-row items-center gap-6">
+                        <div class="w-full md:w-2/5">
+                             <img id="main-image" src="${imageUrl}" alt="${data.word}" class="rounded-lg shadow-lg w-full h-auto object-cover clickable-image">
+                        </div>
+                        <div class="w-full md:w-3/5">
+                            <div class="flex items-center gap-4 mb-4">
+                                <h2 class="text-5xl font-bold">${data.word}</h2>
+                                <button onclick="speak('${data.word}', 'en-US')" class="btn-3d p-3"><i data-lucide="volume-2"></i></button>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <p class="text-2xl text-gray-600">${data.koreanMeaning}</p>
+                                <button onclick="speak('${data.koreanMeaning}', 'ko-KR')" class="btn-3d p-3"><i data-lucide="volume-2"></i></button>
+                            </div>
+                            <p class="text-lg text-gray-500 mt-2">[${data.pronunciation}]</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            contentContainer.insertAdjacentHTML('beforeend', html);
+            safeCreateIcons();
+        }
+
+        function renderEpisode(episode, imageUrl) {
+            const html = `
+                <div class="card p-6">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center"><i data-lucide="sparkles" class="mr-2 text-yellow-500"></i>재미있는 에피소드</h3>
+                    <img id="episode-image" src="${imageUrl}" alt="Episode illustration" class="rounded-lg shadow-md w-full h-auto object-cover mb-4 max-w-sm mx-auto clickable-image">
+                    <div class="space-y-2">
+                        <p class="text-lg leading-relaxed">${addClickToSearch(episode.story)}</p>
+                        <p class="text-md leading-relaxed text-gray-600">${episode.story_ko}</p>
+                    </div>
+                    <div class="mt-2 flex gap-2">
+                         <button class="icon-btn">
+                            <i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${episode.story.replace(/'/g, "\\'")}', 'en-US')"></i>
+                            <span class="tooltip">영어 듣기</span>
+                         </button>
+                         <button class="icon-btn">
+                            <i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${episode.story_ko.replace(/'/g, "\\'")}', 'ko-KR')"></i>
+                            <span class="tooltip">한국어 듣기</span>
+                         </button>
+                    </div>
+                </div>
+            `;
+            contentContainer.insertAdjacentHTML('beforeend', html);
+            safeCreateIcons();
+        }
+
+        function renderDeepDiveButtonsContainer() {
+            const container = document.createElement('div');
+            container.id = 'deep-dive-buttons';
+            container.className = 'card p-6 grid grid-cols-1 sm:grid-cols-2 gap-4';
+            contentContainer.appendChild(container);
+            return container;
+        }
+
+        function appendConceptTreeButton(container, conceptTreeData) {
+            const conceptTreeBtn = document.createElement('button');
+            conceptTreeBtn.id = 'concept-tree-btn';
+            conceptTreeBtn.className = 'btn-3d w-full';
+            conceptTreeBtn.textContent = '개념 트리 보기';
+            conceptTreeBtn.onclick = () => showConceptTree(conceptTreeData);
+            container.appendChild(conceptTreeBtn);
+        }
+
+        function appendEncyclopediaButton(container, encyclopediaData) {
+            const encyclopediaBtn = document.createElement('button');
+            encyclopediaBtn.id = 'encyclopedia-btn';
+            encyclopediaBtn.className = 'btn-3d w-full';
+            encyclopediaBtn.textContent = '백과사전식 설명 보기';
+            encyclopediaBtn.onclick = () => showEncyclopedia(encyclopediaData);
+            container.prepend(encyclopediaBtn); // Prepend to make it appear first in the grid
+        }
+
+        async function renderMeanings(meanings, word, searchId) {
+            const container = document.createElement('div');
+            container.className = 'card p-6 space-y-8';
+            container.innerHTML = `<h3 class="text-2xl font-bold mb-4 flex items-center"><i data-lucide="book-open-check" class="mr-2 text-green-600"></i>의미 분석</h3>`;
+            contentContainer.appendChild(container);
+
+            for (const [index, meaning] of meanings.entries()) {
+                if(currentSearchId !== searchId) return;
+                
+                const element = document.createElement('div');
+                element.className = 'border-t border-slate-300 pt-6';
+                container.appendChild(element);
+
+                const examplesPrompt = `영어 단어 "${word}"의 "${meaning.description}" 의미와 관련된, 현대적이고 유용한 영어 예문 5개와 각각의 한글 번역을 생성해줘. 다음 JSON 형식을 반드시 따라줘:
+                [
+                  {"en": "Example sentence 1.", "ko": "예문 1 한글 번역."},
+                  {"en": "Example sentence 2.", "ko": "예문 2 한글 번역."}
+                ]`;
+                const examples = await callGemini(examplesPrompt, true);
+                if(currentSearchId !== searchId) return;
+
+                const placeholderImg = "https://placehold.co/300x300/e0e5ec/4a5568?text=Loading...";
+                const imageHtml = `<img id="meaning-image-${index}" src="${placeholderImg}" alt="${meaning.type}" class="rounded-lg shadow-md w-[300px] h-[300px] object-cover float-right ml-6 mb-4 hidden md:block clickable-image">`;
+
+                const examplesHtml = examples.map((ex, i) => `
+                    <li class="flex items-start justify-between gap-3 mt-2">
+                        <div class="flex items-start">
+                            <span class="text-gray-500 mr-2">${i + 1}.</span>
+                            <div>
+                                <p class="text-md font-medium">${addClickToSearch(ex.en)}</p>
+                                <p class="text-sm text-gray-500">${ex.ko}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center flex-shrink-0 gap-1">
+                            <button class="icon-btn">
+                                <i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${ex.en.replace(/'/g, "\\'")}', 'en-US')"></i>
+                                <span class="tooltip">영어 듣기</span>
+                            </button>
+                            <button class="icon-btn">
+                                <i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${ex.ko.replace(/'/g, "\\'")}', 'ko-KR')"></i>
+                                <span class="tooltip">한국어 듣기</span>
+                            </button>
+                            <button class="icon-btn">
+                                <i data-lucide="save" class="w-5 h-5" onclick="saveSentence('${ex.en.replace(/'/g, "\\'")}', '${ex.ko.replace(/'/g, "\\'")}')"></i>
+                                <span class="tooltip">저장하기</span>
+                            </button>
+                        </div>
+                    </li>
+                `).join('');
+
+                element.innerHTML = `
+                    ${imageHtml}
+                    <h4 class="text-xl font-semibold text-blue-700">${meaning.type}</h4>
+                    <p class="text-gray-600 my-2">${meaning.description}</p>
+                    <p class="font-medium mt-4 mb-2">대표 예문:</p>
+                    <div class="bg-slate-200 p-4 rounded-lg">
+                        <div>
+                            <p class="text-lg font-semibold">${addClickToSearch(meaning.exampleSentence)}</p>
+                            <p class="text-md text-gray-600">${meaning.exampleSentenceTranslation}</p>
+                        </div>
+                        <div class="flex items-center gap-2 mt-2">
+                             <button class="icon-btn">
+                                <i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${meaning.exampleSentence.replace(/'/g, "\\'")}', 'en-US')"></i>
+                                <span class="tooltip">영어 듣기</span>
+                            </button>
+                            <button class="icon-btn">
+                                <i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${meaning.exampleSentenceTranslation.replace(/'/g, "\\'")}', 'ko-KR')"></i>
+                                <span class="tooltip">한국어 듣기</span>
+                            </button>
+                            <button class="icon-btn">
+                                <i data-lucide="save" class="w-5 h-5" onclick="saveSentence('${meaning.exampleSentence.replace(/'/g, "\\'")}', '${meaning.exampleSentenceTranslation.replace(/'/g, "\\'")}')"></i>
+                                <span class="tooltip">저장하기</span>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="font-medium mt-4 mb-2">추가 예문:</p>
+                    <ul class="list-inside space-y-2">${examplesHtml}</ul>
+                `;
+            }
+            safeCreateIcons();
+        }
+
+        function renderDeepDive(data) {
+             const html = `
+                <div class="card p-6">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center"><i data-lucide="graduation-cap" class="mr-2 text-purple-600"></i>심화 학습</h3>
+                    <div class="space-y-6">
+                        ${renderSection("관련 명언/문구", "quote", data.quotes.map(q => `
+                            <div class="border-l-4 border-slate-400 pl-4 py-2">
+                                <p class="font-semibold text-lg">${addClickToSearch(q.quote)}</p>
+                                <p class="text-gray-600">${q.translation}</p>
+                                <div class="mt-2 flex gap-2">
+                                  <button class="icon-btn">
+                                    <i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${q.quote.replace(/'/g, "\\'")}', 'en-US')"></i>
+                                    <span class="tooltip">영어 듣기</span>
+                                  </button>
+                                  <button class="icon-btn">
+                                    <i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${q.translation.replace(/'/g, "\\'")}', 'ko-KR')"></i>
+                                    <span class="tooltip">한국어 듣기</span>
+                                  </button>
+                                  <button class="icon-btn">
+                                    <i data-lucide="save" class="w-5 h-5" onclick="saveSentence('${q.quote.replace(/'/g, "\\'")}', '${q.translation.replace(/'/g, "\\'")}')"></i>
+                                    <span class="tooltip">저장하기</span>
+                                  </button>
+                                </div>
+                            </div>`).join('<hr class="my-3 border-slate-300">')
+                        )}
+                        ${renderSection("유의어 및 반의어", "arrow-right-left", `
+                            <div>
+                               <h5 class="font-semibold">유의어:</h5>
+                               <div class="flex flex-wrap gap-2 mt-2">${data.synonyms.map(s => `<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full clickable-word">${s}</span>`).join('')}</div>
+                            </div>
+                            <div class="mt-4">
+                               <h5 class="font-semibold">반의어:</h5>
+                               <div class="flex flex-wrap gap-2 mt-2">${data.antonyms.map(a => `<span class="bg-red-100 text-red-800 px-3 py-1 rounded-full clickable-word">${a}</span>`).join('')}</div>
+                            </div>
+                        `)}
+                         ${renderSection("AI 시나리오 학습", "message-circle", `
+                            <div class="bg-slate-200 p-4 rounded-lg space-y-3">
+                               ${data.dialogue.map(d => `
+                                  <div class="border-b border-slate-300 pb-2 mb-2 last:border-b-0 last:pb-0 last:mb-0">
+                                     <div class="flex justify-between items-start gap-2">
+                                         <div class="flex-grow">
+                                            <p><span class="font-bold text-blue-600">${d.speaker}:</span> ${addClickToSearch(d.line)}</p>
+                                            <p class="text-sm text-gray-500 pl-4">${d.translation}</p>
+                                         </div>
+                                         <div class="flex items-center flex-shrink-0 gap-1 mt-1">
+                                             <button class="icon-btn">
+                                                <i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${d.line.replace(/'/g, "\\'")}', 'en-US')"></i>
+                                                <span class="tooltip">영어 듣기</span>
+                                             </button>
+                                             <button class="icon-btn">
+                                                <i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${d.translation.replace(/'/g, "\\'")}', 'ko-KR')"></i>
+                                                <span class="tooltip">한국어 듣기</span>
+                                             </button>
+                                             <button class="icon-btn">
+                                                <i data-lucide="save" class="w-5 h-5" onclick="saveSentence('${d.line.replace(/'/g, "\\'")}', '${d.translation.replace(/'/g, "\\'")}')"></i>
+                                                <span class="tooltip">저장하기</span>
+                                             </button>
+                                         </div>
+                                     </div>
+                                  </div>
+                               `).join('')}
+                            </div>
+                         `)}
+                         ${renderQuiz("4지선다 퀴즈", "swords", data.quiz)}
+                    </div>
+                </div>
+            `;
+            contentContainer.insertAdjacentHTML('beforeend', html);
+            safeCreateIcons();
+        }
+        
+        function renderSection(title, icon, content) {
+            return `
+                <div class="border-t border-slate-300 pt-4">
+                    <h4 class="text-xl font-semibold mb-3 flex items-center"><i data-lucide="${icon}" class="w-5 h-5 mr-2"></i>${title}</h4>
+                    <div>${content}</div>
+                </div>
+            `;
+        }
+        
+        function renderQuiz(title, icon, quizData) {
+            const quizContent = quizData.map((q, index) => {
+                const optionsHtml = q.options.map(option => `
+                    <label class="block">
+                        <input type="radio" name="quiz-${index}" value="${option}" class="mr-2">
+                        ${option}
+                    </label>
+                `).join('');
+                return `
+                    <div class="mt-4 bg-slate-200 p-4 rounded-lg" id="quiz-container-${index}">
+                        <p class="font-semibold">${index + 1}. ${q.question}</p>
+                        <div class="my-2 space-y-1">${optionsHtml}</div>
+                        <button onclick="checkQuizAnswer(${index}, '${q.answer.replace(/'/g, "\\'")}')" class="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">정답 확인</button>
+                        <div id="quiz-explanation-${index}" class="hidden mt-2 p-2 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700">
+                           <p><strong class="font-bold">정답: ${q.answer}</strong></p>
+                           <p>${q.explanation}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            return renderSection(title, icon, quizContent);
+        }
+        
+        // ---------------------------
+        // 4. UI/UX 및 편의 기능
+        // ---------------------------
+
+        window.checkQuizAnswer = function(index, correctAnswer) {
+            const container = document.getElementById(`quiz-container-${index}`);
+            const selected = container.querySelector(`input[name="quiz-${index}"]:checked`);
+            if (!selected) {
+                showToast("답을 선택해주세요.", "warning");
+                return;
+            }
+            if (selected.value === correctAnswer) {
+                selected.parentElement.classList.add('text-green-600', 'font-bold');
+                showToast("정답입니다!", "success");
+            } else {
+                selected.parentElement.classList.add('text-red-600', 'font-bold');
+                showToast("오답입니다. 다시 생각해보세요.", "error");
+            }
+            document.getElementById(`quiz-explanation-${index}`).classList.remove('hidden');
+        }
+
+        function showLoader(progress, text) {
+            loadingContainer.classList.remove('hidden');
+            progressBar.style.width = `${progress}%`;
+            loadingText.textContent = text;
+        }
+
+        function updateLoader(progress, text) {
+            progressBar.style.width = `${progress}%`;
+            loadingText.textContent = text;
+        }
+
+        function hideLoader() {
+            loadingContainer.classList.add('hidden');
+        }
+
+        function addClickToSearch(text) {
+             if(!text) return '';
+             return text.replace(/\b[a-zA-Z]{2,}\b/g, (match) => `<span class="clickable-word">${match}</span>`);
+        }
+
+        window.speak = function(text, lang = 'en-US') {
+            if (!('speechSynthesis' in window)) {
+                showToast("현재 브라우저에서는 음성 출력을 지원하지 않습니다.", "warning");
+                return;
+            }
+            if (!text) return;
+            speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = lang;
+            speechSynthesis.speak(utterance);
+        }
+
+        function showToast(message, type = "info") {
+            const toast = document.getElementById('toast-container');
+            const toastMessage = document.getElementById('toast-message');
+            toastMessage.textContent = message;
+
+            toast.className = 'toast show fixed bottom-24 right-5 text-white px-6 py-3 rounded-lg shadow-lg';
+            if (type === 'success') toast.classList.add('bg-green-600');
+            else if (type === 'error') toast.classList.add('bg-red-600');
+            else if (type === 'warning') toast.classList.add('bg-yellow-500');
+            else toast.classList.add('bg-gray-800');
+            
+            setTimeout(() => { toast.className = 'toast'; }, 3000);
+        }
+
+        document.body.addEventListener('click', function(event) {
+            if (event.target.classList.contains('clickable-word')) {
+                const word = event.target.textContent.split('(')[0].trim();
+                const searchUrl = `${window.location.pathname}?q=${encodeURIComponent(word)}`;
+                window.open(searchUrl, '_blank');
+            }
+        });
+        
+        // ---------------------------
+        // 5. 모달 및 툴팁 관련 함수
+        // ---------------------------
+        
+        const modalContainer = document.getElementById('modal-container');
+        const modalContent = document.getElementById('modal-content');
+        const imageModalContainer = document.getElementById('image-modal-container');
+        const modalImage = document.getElementById('modal-image');
+        const wordTooltip = document.getElementById('word-tooltip');
+        
+        window.showImageModal = function(src) {
+            modalImage.src = src;
+            imageModalContainer.classList.remove('hidden');
+            imageModalContainer.classList.add('flex');
+            safeCreateIcons();
+        }
+
+        window.hideImageModal = function() {
+            imageModalContainer.classList.add('hidden');
+            imageModalContainer.classList.remove('flex');
+            modalImage.src = ''; 
+        }
+
+        function showEncyclopedia(data) {
+            const renderEncyclopediaSection = (title, content) => {
+                if (!content) return '';
+                return `<h4>${title}</h4><p>${content.replace(/\n/g, '<br>')}</p>`;
+            }
+
+            modalContent.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-2xl font-bold">백과사전식 설명</h3>
+                    <button onclick="hideModal()" class="text-gray-500 hover:text-gray-800"><i data-lucide="x"></i></button>
+                </div>
+                <div x-data="{ tab: 'ko' }">
+                    <div class="border-b border-gray-200">
+                        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                            <button @click="tab = 'ko'" :class="{ 'border-blue-500 text-blue-600': tab === 'ko', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': tab !== 'ko' }" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">한글 번역</button>
+                            <button @click="tab = 'en'" :class="{ 'border-blue-500 text-blue-600': tab === 'en', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': tab !== 'en' }" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">영어 원문</button>
+                        </nav>
+                    </div>
+                    <div x-show="tab === 'ko'" class="prose max-w-none mt-4 text-justify">
+                        ${renderEncyclopediaSection('서론', data.introduction_ko)}
+                        ${renderEncyclopediaSection('어원', data.etymology_ko)}
+                        ${renderEncyclopediaSection('역사적 배경', data.history_ko)}
+                        ${renderEncyclopediaSection('문학/현대에서의 사용', data.usage_ko)}
+                    </div>
+                    <div x-show="tab === 'en'" class="prose max-w-none mt-4 text-justify" id="encyclopedia-en-content">
+                        ${renderEncyclopediaSection('Introduction', data.introduction)}
+                        ${renderEncyclopediaSection('Etymology', data.etymology)}
+                        ${renderEncyclopediaSection('Historical Background', data.history)}
+                        ${renderEncyclopediaSection('Usage in Literature/Modern Day', data.usage)}
+                    </div>
+                </div>
+            `;
+            const enContent = document.getElementById('encyclopedia-en-content');
+            enContent.innerHTML = addClickToSearch(enContent.innerHTML);
+            enContent.addEventListener('click', (e) => {
+                if(e.target.classList.contains('clickable-word')) {
+                    hideModal();
+                }
+            });
+            modalContainer.classList.remove('hidden');
+            modalContainer.classList.add('flex');
+            safeCreateIcons();
+        }
+        
+        function showConceptTree(data) {
+            const createList = (title, items) => {
+                if (!items || items.length === 0) return '';
+                return `<div><h4 class="font-semibold text-lg mt-4">${title}</h4><div class="flex flex-wrap gap-2 mt-2">${items.map(item => `<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full clickable-word">${item}</span>`).join('')}</div></div>`
+            };
+            modalContent.innerHTML = `
+                 <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-2xl font-bold">개념 트리</h3>
+                    <button onclick="hideModal()" class="text-gray-500 hover:text-gray-800"><i data-lucide="x"></i></button>
+                </div>
+                <div id="concept-tree-content">
+                    ${createList('상위 개념', data.superordinate)}
+                    ${createList('동위 개념', data.coordinate)}
+                    ${createList('하위 개념', data.subordinate)}
+                </div>
+            `;
+            const treeContent = document.getElementById('concept-tree-content');
+            treeContent.addEventListener('click', (e) => {
+                if(e.target.classList.contains('clickable-word')) {
+                    hideModal();
+                }
+            });
+            modalContainer.classList.remove('hidden');
+            modalContainer.classList.add('flex');
+            safeCreateIcons();
+        }
+
+        window.hideModal = function(event) {
+            if (event && event.target !== modalContainer) return;
+            modalContainer.classList.add('hidden');
+            modalContainer.classList.remove('flex');
+        }
+        
+        // ---------------------------
+        // 6. Firestore 데이터 관리
+        // ---------------------------
+        
+        let savedWords = [];
+        let savedSentences = [];
+        
+        async function addWordToHistory(word, meaning) {
+             if (!db || !userId) return;
+             const wordRef = doc(db, `artifacts/${appId}/users/${userId}/saved_words/${word}`);
+             try {
+                await setDoc(wordRef, { word, meaning, timestamp: new Date(), read: false }, { merge: true });
+             } catch(e){
+                console.error("Error adding word to history: ", e);
+             }
+        }
+        
+        window.saveSentence = async function(en, ko) {
+            if (!db || !userId) {
+                showToast("데이터베이스에 연결되지 않았습니다.", "error");
+                return;
+            }
+            try {
+                const sentenceRef = doc(collection(db, `artifacts/${appId}/users/${userId}/saved_sentences`));
+                await setDoc(sentenceRef, { en, ko, timestamp: new Date(), read: false });
+                showToast("예문이 저장되었습니다.", "success");
+            } catch (e) {
+                console.error("Error saving sentence: ", e);
+                showToast("예문 저장에 실패했습니다.", "error");
+            }
+        }
+        
+        function loadUserLists() {
+            if (!db || !userId) return;
+
+            const wordsQuery = query(collection(db, `artifacts/${appId}/users/${userId}/saved_words`));
+            onSnapshot(wordsQuery, (snapshot) => {
+                savedWords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if(currentListType === 'words') renderList();
+            }, (error) => console.error("Error loading words:", error));
+
+            const sentencesQuery = query(collection(db, `artifacts/${appId}/users/${userId}/saved_sentences`));
+            onSnapshot(sentencesQuery, (snapshot) => {
+                savedSentences = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if(currentListType === 'sentences') renderList();
+            }, (error) => console.error("Error loading sentences:", error));
+        }
+
+        // ---------------------------
+        // 7. 저장 목록 모달 UI
+        // ---------------------------
+        
+        const listModalContainer = document.getElementById('list-modal-container');
+        const listModalTitle = document.getElementById('list-modal-title');
+        const listModalContent = document.getElementById('list-modal-content');
+        const sortOptions = document.getElementById('sort-options');
+        const markReadBtn = document.getElementById('mark-read-btn');
+        const markUnreadBtn = document.getElementById('mark-unread-btn');
+        const deleteSelectedBtn = document.getElementById('delete-selected-btn');
+        
+        let currentListType = '';
+        let currentSort = 'newest';
+        
+        function showListModal(type) {
+            currentListType = type;
+            listModalContainer.classList.remove('hidden');
+            listModalContainer.classList.add('flex');
+            
+            if (type === 'words') {
+                listModalTitle.textContent = '저장된 단어 목록';
+                sortOptions.innerHTML = `
+                    <option value="newest">최신순</option>
+                    <option value="alphabetical">알파벳순</option>
+                `;
+            } else {
+                listModalTitle.textContent = '저장된 예문 목록';
+                 sortOptions.innerHTML = `
+                    <option value="newest">최신순</option>
+                    <option value="length">길이순</option>
+                `;
+            }
+            sortOptions.value = currentSort;
+            renderList();
+            updateListActionButtonsState();
+        }
+
+        function renderList() {
+            let items = currentListType === 'words' ? [...savedWords] : [...savedSentences];
+
+            if (currentSort === 'newest') {
+                items.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+            } else if (currentSort === 'alphabetical' && currentListType === 'words') {
+                items.sort((a, b) => a.word.localeCompare(b.word));
+            } else if (currentSort === 'length' && currentListType === 'sentences') {
+                items.sort((a, b) => a.en.length - b.en.length);
+            }
+            
+            if (items.length === 0) {
+                 listModalContent.innerHTML = `<p class="text-center text-gray-500">저장된 항목이 없습니다.</p>`;
+                 return;
+            }
+
+            listModalContent.innerHTML = items.map(item => {
+                const readClass = item.read ? 'opacity-50' : '';
+                const baseHtml = `
+                    <div class="flex items-center justify-between p-3 rounded-lg hover:bg-slate-200 ${readClass}" data-id="${item.id}">
+                        <div class="flex items-center flex-grow min-w-0">
+                            <input type="checkbox" class="mr-4 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 item-checkbox" data-id="${item.id}">
+                            <div class="flex-grow min-w-0">
+                `;
+
+                if (currentListType === 'words') {
+                    return baseHtml + `
+                                <p class="font-bold text-lg clickable-word truncate">${item.word}</p>
+                                <p class="truncate">${item.meaning}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1 flex-shrink-0">
+                            <button onclick="toggleReadStatus('${item.id}', 'words')" class="icon-btn"><i data-lucide="${item.read ? 'eye-off' : 'eye'}"></i> <span class="tooltip">${item.read ? '읽지 않음으로' : '읽음으로'}</span></button>
+                            <button onclick="deleteListItem('${item.id}', 'words')" class="icon-btn text-red-500 hover:bg-red-100"><i data-lucide="trash-2"></i><span class="tooltip">삭제</span></button>
+                        </div>
+                    </div>
+                    `;
+                } else { // sentences
+                     return baseHtml + `
+                                <div class="truncate">
+                                    <p class="font-semibold truncate">${addClickToSearch(item.en)}</p>
+                                    <p class="text-sm truncate">${item.ko}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1 flex-shrink-0">
+                            <button class="icon-btn"><i data-lucide="volume-2" onclick="speak('${item.en.replace(/'/g, "\\'")}', 'en-US')"></i><span class="tooltip">영어 듣기</span></button>
+                           <button onclick="toggleReadStatus('${item.id}', 'sentences')" class="icon-btn"><i data-lucide="${item.read ? 'eye-off' : 'eye'}"></i><span class="tooltip">${item.read ? '읽지 않음으로' : '읽음으로'}</span></button>
+                           <button onclick="deleteListItem('${item.id}', 'sentences')" class="icon-btn text-red-500 hover:bg-red-100"><i data-lucide="trash-2"></i><span class="tooltip">삭제</span></button>
+                        </div>
+                    </div>
+                    `;
+                }
+            }).join('<hr class="my-1 border-slate-300">');
+            
+            safeCreateIcons();
+        }
+        
+        window.deleteListItem = async function(id, type) {
+            const collectionName = type === 'words' ? 'saved_words' : 'saved_sentences';
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/${collectionName}/${id}`);
+            try {
+                await deleteDoc(docRef);
+                showToast("삭제되었습니다.", "success");
+            } catch (error) {
+                console.error("Error deleting item:", error);
+                showToast("삭제에 실패했습니다.", "error");
+            }
+        }
+        
+        window.toggleReadStatus = async function(id, type) {
+            const collectionName = type === 'words' ? 'saved_words' : 'saved_sentences';
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/${collectionName}/${id}`);
+            try {
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const currentStatus = docSnap.data().read;
+                    await updateDoc(docRef, { read: !currentStatus });
+                }
+            } catch (error) {
+                console.error("Error toggling read status:", error);
+                showToast("상태 변경에 실패했습니다.", "error");
+            }
+        };
+        
+        function updateListActionButtonsState() {
+            const checkedItems = listModalContent.querySelectorAll('.item-checkbox:checked');
+            const hasSelection = checkedItems.length > 0;
+            markReadBtn.disabled = !hasSelection;
+            markUnreadBtn.disabled = !hasSelection;
+            deleteSelectedBtn.disabled = !hasSelection;
+        }
+
+        listModalContent.addEventListener('change', (e) => {
+            if (e.target.classList.contains('item-checkbox')) {
+                updateListActionButtonsState();
+            }
+        });
+
+        async function performBulkAction(action) {
+            const checkedItems = listModalContent.querySelectorAll('.item-checkbox:checked');
+            if (checkedItems.length === 0) {
+                showToast("항목을 선택해주세요.", "warning");
+                return;
+            }
+
+            const batch = writeBatch(db);
+            const collectionName = currentListType === 'words' ? 'saved_words' : 'saved_sentences';
+            
+            checkedItems.forEach(item => {
+                const docRef = doc(db, `artifacts/${appId}/users/${userId}/${collectionName}/${item.dataset.id}`);
+                if (action === 'delete') {
+                    batch.delete(docRef);
+                } else { // mark-read or mark-unread
+                    batch.update(docRef, { read: action === 'mark-read' });
+                }
+            });
+
+            try {
+                await batch.commit();
+                showToast("선택한 항목들이 처리되었습니다.", "success");
+            } catch (error) {
+                console.error("Bulk action failed:", error);
+                showToast("작업에 실패했습니다.", "error");
+            }
+        }
+
+        document.getElementById('delete-selected-btn').addEventListener('click', () => performBulkAction('delete'));
+        document.getElementById('mark-read-btn').addEventListener('click', () => performBulkAction('mark-read'));
+        document.getElementById('mark-unread-btn').addEventListener('click', () => performBulkAction('mark-unread'));
+
+
+        window.hideListModal = function(event) {
+             if (event && event.target !== listModalContainer && !listModalContainer.contains(event.target)) return;
+             if(event && event.target === listModalContainer) { 
+                listModalContainer.classList.add('hidden');
+                listModalContainer.classList.remove('flex');
+             } else if (!event) { 
+                listModalContainer.classList.add('hidden');
+                listModalContainer.classList.remove('flex');
+             }
+        }
+        
+        sortOptions.addEventListener('change', (e) => {
+            currentSort = e.target.value;
+            renderList();
+        });
+
+
+        // ---------------------------
+        // 8. 이벤트 리스너
+        // ---------------------------
+        
+        searchButton.addEventListener('click', handleSearch);
+        searchInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                handleSearch();
+            }
+        });
+        
+        document.getElementById('word-list-btn').addEventListener('click', () => showListModal('words'));
+        document.getElementById('sentence-list-btn').addEventListener('click', () => showListModal('sentences'));
+        document.getElementById('share-btn').addEventListener('click', () => {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                showToast("주소가 복사되었습니다!", "success");
+            }, () => {
+                showToast("주소 복사에 실패했습니다.", "error");
+            });
+        });
+        
+        
+        // ---------------------------
+        // 9. 앱 초기화 및 툴팁
+        // ---------------------------
+        
+        function safeCreateIcons() {
+            if (window.lucide) {
+                lucide.createIcons();
+            } else {
+                setTimeout(safeCreateIcons, 50);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            safeCreateIcons();
+
+            const alpineScript = document.createElement('script');
+            alpineScript.src = 'https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.min.js';
+            alpineScript.defer = true;
+            document.head.appendChild(alpineScript);
+            
+            initializeFirebase();
+
+            // Word translation tooltip listeners
+            document.body.addEventListener('mouseover', async (event) => {
+                const target = event.target.closest('.clickable-word');
+                if (target) {
+                    const word = target.textContent.toLowerCase().replace(/[^a-z]/g, '');
+                    if (!word) return;
+
+                    const rect = target.getBoundingClientRect();
+                    wordTooltip.style.left = `${rect.left + window.scrollX + rect.width / 2}px`;
+                    wordTooltip.style.top = `${rect.top + window.scrollY}px`;
+                    wordTooltip.style.transform = 'translate(-50%, -110%)';
+                    wordTooltip.textContent = '번역 중...';
+                    wordTooltip.classList.remove('hidden');
+
+                    let translation;
+                    if (translationCache[word]) {
+                        translation = translationCache[word];
+                    } else {
+                        try {
+                            const prompt = `Translate the English word "${word}" into its primary Korean meaning. Provide only the Korean word or a short phrase, without any additional explanation or quotation marks.`;
+                            translation = await callGemini(prompt);
+                            translationCache[word] = translation;
+                        } catch (error) {
+                            console.error('Translation failed:', error);
+                            translation = '번역 실패';
+                        }
+                    }
+                    wordTooltip.textContent = translation;
+                }
+            });
+
+            document.body.addEventListener('mouseout', (event) => {
+                const target = event.target.closest('.clickable-word');
+                if (target) {
+                    wordTooltip.classList.add('hidden');
+                }
+            });
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryFromUrl = urlParams.get('q');
+            if (queryFromUrl) {
+                searchInput.value = decodeURIComponent(queryFromUrl);
+                handleSearch();
+            }
+        });
+
+    </script>
+</body>
+</html>
