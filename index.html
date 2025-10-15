@@ -267,8 +267,9 @@
         const loadingText = document.getElementById('loading-text');
         const progressBar = document.getElementById('progress-bar');
         
-        // API 엔드포인트와 키 (보안을 위해 실제 환경에서는 서버에서 관리해야 합니다)
-        const apiKey = "AIzaSyBWHFr5xqAV2xClvmKjLKVFJlWV7P2lodY"; // API 키는 fetch 호출 시 환경에 의해 자동으로 제공됩니다.
+        // AI API 키 (Google AI Studio에서 발급받은 키를 여기에 넣어야 합니다.)
+        // 이미지 로딩 및 콘텐츠 생성에 사용됩니다.
+        const apiKey = "AIzaSyDKmpQO6htm7jZ2DByUfGnmocZP7dpTJhs"; // ⬅️ Google AI API 키
         const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent`;
         const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict`;
         
@@ -278,17 +279,23 @@
         // Firebase 설정
         let db, auth, userId, app;
         
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const appId = 'ai-vocabulary-builder-github'; // GitHub Pages에서는 고정된 값 사용
         
         // Firestore 데이터베이스 초기화 및 익명 로그인
         async function initializeFirebase() {
             try {
-                 if (typeof __firebase_config === 'undefined') {
-                    console.error("Firebase config is not available.");
-                    showToast("서비스 초기화에 실패했습니다.", "error");
-                    return;
-                }
-                const firebaseConfig = JSON.parse(__firebase_config);
+                // --- GitHub Pages용 Firebase Config 하드코딩 시작 ---
+                const firebaseConfig = {
+                    apiKey: "AIzaSyDKmpQO6htm7jZ2DByUfGnmocZP7dpTJhs", 
+                    authDomain: "projec-48c55.firebaseapp.com",
+                    projectId: "projec-48c55",
+                    storageBucket: "projec-48c55.firebasestorage.app",
+                    messagingSenderId: "376464552007",
+                    appId: "1:376464552007:web:929b53196fc86af19dc162",
+                    measurementId: "G-HMKJMNFGM4"
+                };
+                // --- GitHub Pages용 Firebase Config 하드코딩 끝 ---
+
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
@@ -297,18 +304,12 @@
                 onAuthStateChanged(auth, user => {
                     if (user) {
                         userId = user.uid;
-                        console.log("Authenticated User ID:", userId);
-                        loadUserLists(); // 인증 후 사용자 목록 로드
+                        loadUserLists();
                     } else {
-                        console.log("User not signed in.");
+                        signInAnonymously(auth).catch(error => console.error("Anonymous Sign-in failed:", error));
                     }
                 });
 
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
             } catch (error) {
                 console.error("Firebase Initialization Error: ", error);
                 showToast("데이터베이스 연결에 실패했습니다.", "error");
@@ -319,13 +320,6 @@
         // 1. API 통신 함수
         // ---------------------------
 
-        /**
-         * API 호출을 재시도 로직과 함께 실행합니다.
-         * @param {string} url - API URL
-         * @param {object} payload - API 요청 본문
-         * @param {number} retries - 최대 재시도 횟수
-         * @returns {Promise<object>} - API 응답 데이터
-         */
         async function fetchWithRetry(url, payload, retries = 3) {
             const finalUrl = `${url}?key=${apiKey}`;
             for (let i = 0; i < retries; i++) {
@@ -346,17 +340,11 @@
                          showToast("AI 서버 응답에 실패했습니다. 잠시 후 다시 시도해주세요.", "error");
                          throw error;
                     }
-                    await new Promise(res => setTimeout(res, 1000 * (i + 1))); // Exponential backoff
+                    await new Promise(res => setTimeout(res, 1000 * (i + 1)));
                 }
             }
         }
 
-        /**
-         * Gemini 텍스트 생성 API 호출
-         * @param {string} prompt - Gemini에 전달할 프롬프트
-         * @param {boolean} isJson - JSON 형식의 응답을 기대하는지 여부
-         * @returns {Promise<string|object>} - 생성된 텍스트 또는 JSON 객체
-         */
         async function callGemini(prompt, isJson = false) {
             const payload = {
                 contents: [{ parts: [{ text: prompt }] }],
@@ -372,11 +360,6 @@
             return isJson ? JSON.parse(text) : text;
         }
 
-        /**
-         * Imagen 이미지 생성 API 호출
-         * @param {string} prompt - Imagen에 전달할 프롬프트
-         * @returns {Promise<string>} - 생성된 이미지의 Base64 데이터 URL
-         */
         async function callImagen(prompt) {
              const payload = { 
                 instances: [{ prompt: prompt }],
