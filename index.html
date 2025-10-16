@@ -441,6 +441,12 @@
         // ---------------------------
 
         async function fetchWithRetry(baseUrl, payload, retries = 3) {
+            // API Key가 없으면 호출하지 않고 오류를 발생시킵니다.
+            if (!apiKey || apiKey === "YOUR_API_KEY_HERE") {
+                showToast("Google AI API 키가 설정되지 않았습니다.", "error");
+                throw new Error("Google AI API Key is missing.");
+            }
+
             const finalUrl = `${baseUrl}?key=${apiKey}`;
             for (let i = 0; i < retries; i++) {
                 try {
@@ -522,8 +528,8 @@
         // ---------------------------
         
         async function handleSearch(query) {
-            if (!apiKey && typeof __firebase_config === 'undefined') { // Check for API key only in deployed environment
-                showToast("Google AI API 키가 없습니다. 코드에 키를 입력하고 다시 배포해주세요.", "error");
+            if (!apiKey || apiKey === "YOUR_API_KEY_HERE") { 
+                showToast("Google AI API 키가 설정되지 않았습니다. 코드에 키를 입력하고 다시 배포해주세요.", "error");
                 return;
             }
             if (!auth || !auth.currentUser) {
@@ -1732,6 +1738,9 @@
         }
         
         async function translateWordOnHover(word) {
+            if (!apiKey || apiKey === "YOUR_API_KEY_HERE") { 
+                return "AI 키 미설정";
+            }
             if (translationCache[word]) {
                 return translationCache[word];
             }
@@ -1825,5 +1834,3 @@
     </script>
 </body>
 </html>
-
-
