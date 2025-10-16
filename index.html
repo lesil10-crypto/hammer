@@ -1855,14 +1855,14 @@
         }
         
         window.craftSentences = async function(button, word) {
-            const contextInput = document.getElementById('sentence-context-input');
+            const contextInput = button.previousElementSibling;
             const context = contextInput.value.trim();
             if (!context) {
                 showToast("상황을 입력해주세요.", "warning");
                 return;
             }
             
-            const resultsContainer = document.getElementById('sentence-crafter-results');
+            const resultsContainer = button.parentElement.nextElementSibling;
             resultsContainer.innerHTML = `<div class="loader mx-auto"></div>`;
             button.disabled = true;
 
