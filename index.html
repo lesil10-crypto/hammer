@@ -352,29 +352,15 @@
         // =========================================================================
         // === GitHub/외부 배포 시 여기에 Firebase 구성 정보를 입력하세요 ===
         // Firebase 콘솔 > 프로젝트 설정 > 일반 탭에서 '웹 앱'의 구성 객체를 복사하여 붙여넣으세요.
-        // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyDKmpQO6htm7jZ2DByUfGnmocZP7dpTJhs",
-  authDomain: "projec-48c55.firebaseapp.com",
-  projectId: "projec-48c55",
-  storageBucket: "projec-48c55.firebasestorage.app",
-  messagingSenderId: "376464552007",
-  appId: "1:376464552007:web:929b53196fc86af19dc162",
-  measurementId: "G-HMKJMNFGM4"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-        
-
+        const USER_FIREBASE_CONFIG = {
+          apiKey: "AIzaSyDKmpQO6htm7jZ2DByUfGnmocZP7dpTJhs",
+          authDomain: "projec-48c55.firebaseapp.com",
+          projectId: "projec-48c55",
+          storageBucket: "projec-48c55.appspot.com",
+          messagingSenderId: "376464552007",
+          appId: "1:376464552007:web:929b53196fc86af19dc162",
+          measurementId: "G-HMKJMNFGM4"
+        };
         // =========================================================================
 
         // ---------------------------
@@ -393,12 +379,13 @@ const analytics = getAnalytics(app);
         const translationCache = {};
 
         // Firebase Setup
-        let db, auth, storage, userId, app;
+        let db, auth, storage, userId;
+        let app; // 'app' variable declared here
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-ai-vocab-app';
         
         // Tab Management
         let tabs = {};
-        let activeTabId = n
+        let activeTabId = null;
         let tabCounter = 0;
         let savedWords = [];
         let savedSentences = [];
@@ -530,7 +517,7 @@ const analytics = getAnalytics(app);
         // ---------------------------
         
         async function handleSearch(query) {
-            if (!auth.currentUser) {
+            if (!auth || !auth.currentUser) {
                 showToast("Firebase에 연결되지 않았습니다. 구성 정보를 확인해주세요.", "error");
                 return;
             }
@@ -1523,7 +1510,7 @@ const analytics = getAnalytics(app);
         const fileUploadButton = document.getElementById('file-upload-button');
         
         fileUploadButton.addEventListener('click', () => {
-            if (!auth.currentUser) {
+            if (!auth || !auth.currentUser) {
                 showToast("Firebase에 연결되지 않았습니다. 구성 정보를 확인해주세요.", "error");
                 return;
             }
