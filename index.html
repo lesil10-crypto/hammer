@@ -1030,18 +1030,18 @@
         }
 
         function showLoader(progress, text) {
-            ui.loadingContainer.classList.remove('hidden');
-            ui.progressBar.style.width = `${progress}%`;
-            ui.loadingText.textContent = text;
+            loadingContainer.classList.remove('hidden');
+            progressBar.style.width = `${progress}%`;
+            loadingText.textContent = text;
         }
 
         function updateLoader(progress, text) {
-            ui.progressBar.style.width = `${progress}%`;
-            ui.loadingText.textContent = text;
+            progressBar.style.width = `${progress}%`;
+            loadingText.textContent = text;
         }
 
         function hideLoader() {
-            ui.loadingContainer.classList.add('hidden');
+            loadingContainer.classList.add('hidden');
         }
 
         function addClickToSearch(text) {
@@ -1079,17 +1079,24 @@
         // 5. 모달 및 툴팁 관련 함수
         // ---------------------------
         
+        const modalContainer = document.getElementById('modal-container');
+        const modalContent = document.getElementById('modal-content');
+        const imageModalContainer = document.getElementById('image-modal-container');
+        const modalImage = document.getElementById('modal-image');
+        const wordTooltip = document.getElementById('word-tooltip');
+        const fileModalContainer = document.getElementById('file-modal-container');
+
         window.showImageModal = function(src) {
-            ui.modalImage.src = src;
-            ui.imageModalContainer.classList.remove('hidden');
-            ui.imageModalContainer.classList.add('flex');
+            modalImage.src = src;
+            imageModalContainer.classList.remove('hidden');
+            imageModalContainer.classList.add('flex');
             safeCreateIcons();
         }
 
         window.hideImageModal = function() {
-            ui.imageModalContainer.classList.add('hidden');
-            ui.imageModalContainer.classList.remove('flex');
-            ui.modalImage.src = ''; 
+            imageModalContainer.classList.add('hidden');
+            imageModalContainer.classList.remove('flex');
+            modalImage.src = ''; 
         }
 
         function showEncyclopedia(data) {
@@ -1109,7 +1116,7 @@
                 `;
             }
 
-            ui.modalContent.innerHTML = `
+            modalContent.innerHTML = `
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-2xl font-bold">백과사전식 설명</h3>
                     <button onclick="hideModal()" class="text-gray-500 hover:text-gray-800"><i data-lucide="x"></i></button>
@@ -1122,8 +1129,8 @@
                 </div>
             `;
             
-            ui.modalContainer.classList.remove('hidden');
-            ui.modalContainer.classList.add('flex');
+            modalContainer.classList.remove('hidden');
+            modalContainer.classList.add('flex');
             safeCreateIcons();
         }
         
@@ -1132,7 +1139,7 @@
                 if (!items || items.length === 0) return '';
                 return `<div><h4 class="font-semibold text-lg mt-4">${title}</h4><div class="flex flex-wrap gap-2 mt-2">${items.map(item => `<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full clickable-word">${item}</span>`).join('')}</div></div>`
             };
-            ui.modalContent.innerHTML = `
+            modalContent.innerHTML = `
                  <div class="flex justify-between items-center mb-4">
                      <h3 class="text-2xl font-bold">개념 트리</h3>
                      <button onclick="hideModal()" class="text-gray-500 hover:text-gray-800"><i data-lucide="x"></i></button>
@@ -1143,27 +1150,27 @@
                      ${createList('하위 개념', data.subordinate)}
                  </div>
             `;
-            ui.modalContainer.classList.remove('hidden');
-            ui.modalContainer.classList.add('flex');
+            modalContainer.classList.remove('hidden');
+            modalContainer.classList.add('flex');
             safeCreateIcons();
         }
 
         window.hideModal = function(event) {
             if (event && event.currentTarget !== event.target) return;
-            ui.modalContainer.classList.add('hidden');
-            ui.modalContainer.classList.remove('flex');
+            modalContainer.classList.add('hidden');
+            modalContainer.classList.remove('flex');
         }
 
         window.showFileModal = function() {
-            ui.fileModalContainer.classList.remove('hidden');
-            ui.fileModalContainer.classList.add('flex');
+            fileModalContainer.classList.remove('hidden');
+            fileModalContainer.classList.add('flex');
             loadFiles();
         }
 
         window.hideFileModal = function(event) {
             if (event && event.currentTarget !== event.target && !event.target.closest('button')) return;
-            ui.fileModalContainer.classList.add('hidden');
-            ui.fileModalContainer.classList.remove('flex');
+            fileModalContainer.classList.add('hidden');
+            fileModalContainer.classList.remove('flex');
         }
         
         // ---------------------------
@@ -1217,25 +1224,36 @@
         // 7. 저장 목록 모달 UI
         // ---------------------------
         
+        const listModalContainer = document.getElementById('list-modal-container');
+        const listModalTitle = document.getElementById('list-modal-title');
+        const listModalContent = document.getElementById('list-modal-content');
+        const sortOptions = document.getElementById('sort-options');
+        const markReadBtn = document.getElementById('mark-read-btn');
+        const markUnreadBtn = document.getElementById('mark-unread-btn');
+        const deleteSelectedBtn = document.getElementById('delete-selected-btn');
+        
+        let currentListType = '';
+        let currentSort = 'newest';
+        
         function showListModal(type) {
             currentListType = type;
-            ui.listModalContainer.classList.remove('hidden');
-            ui.listModalContainer.classList.add('flex');
+            listModalContainer.classList.remove('hidden');
+            listModalContainer.classList.add('flex');
             
             if (type === 'words') {
-                ui.listModalTitle.textContent = '단어 목록 (검색 기록)';
-                ui.sortOptions.innerHTML = `
+                listModalTitle.textContent = '단어 목록 (검색 기록)';
+                sortOptions.innerHTML = `
                     <option value="newest">최신순</option>
                     <option value="alphabetical">알파벳순</option>
                 `;
             } else {
-                ui.listModalTitle.textContent = '저장된 예문 목록';
-                 ui.sortOptions.innerHTML = `
+                listModalTitle.textContent = '저장된 예문 목록';
+                 sortOptions.innerHTML = `
                     <option value="newest">최신순</option>
                     <option value="length">길이순</option>
                 `;
             }
-            ui.sortOptions.value = currentSort;
+            sortOptions.value = currentSort;
             renderList();
             updateListActionButtonsState();
         }
@@ -1257,11 +1275,11 @@
             }
             
             if (items.length === 0) {
-                 ui.listModalContent.innerHTML = `<p class="text-center text-gray-500">저장된 항목이 없습니다.</p>`;
+                 listModalContent.innerHTML = `<p class="text-center text-gray-500">저장된 항목이 없습니다.</p>`;
                  return;
             }
 
-            ui.listModalContent.innerHTML = items.map(item => {
+            listModalContent.innerHTML = items.map(item => {
                 const readClass = item.read ? 'opacity-50' : '';
                 const baseHtml = `
                     <div class="flex items-center justify-between p-3 rounded-lg hover:bg-slate-200 ${readClass}" data-id="${item.id}">
@@ -1333,14 +1351,14 @@
         };
         
         function updateListActionButtonsState() {
-            const checkedItems = ui.listModalContent.querySelectorAll('.item-checkbox:checked');
+            const checkedItems = listModalContent.querySelectorAll('.item-checkbox:checked');
             const hasSelection = checkedItems.length > 0;
-            ui.markReadBtn.disabled = !hasSelection;
-            ui.markUnreadBtn.disabled = !hasSelection;
-            ui.deleteSelectedBtn.disabled = !hasSelection;
+            markReadBtn.disabled = !hasSelection;
+            markUnreadBtn.disabled = !hasSelection;
+            deleteSelectedBtn.disabled = !hasSelection;
         }
 
-        ui.listModalContent.addEventListener('change', (e) => {
+        listModalContent.addEventListener('change', (e) => {
             if (e.target.classList.contains('item-checkbox')) {
                 updateListActionButtonsState();
             }
@@ -1348,7 +1366,7 @@
 
         async function performBulkAction(action) {
             if (!db || !userId) return;
-            const checkedItems = ui.listModalContent.querySelectorAll('.item-checkbox:checked');
+            const checkedItems = listModalContent.querySelectorAll('.item-checkbox:checked');
             if (checkedItems.length === 0) {
                 showToast("항목을 선택해주세요.", "warning");
                 return;
@@ -1379,8 +1397,8 @@
             if(event) {
                  if (event.currentTarget !== event.target && !event.target.closest('button')) return;
             }
-             ui.listModalContainer.classList.add('hidden');
-             ui.listModalContainer.classList.remove('flex');
+             listModalContainer.classList.add('hidden');
+             listModalContainer.classList.remove('flex');
         }
         
         // ---------------------------
@@ -1581,10 +1599,10 @@
         // 9. 이벤트 리스너
         // ---------------------------
         
-        ui.searchButton.addEventListener('click', () => handleSearch(ui.searchInput.value));
-        ui.searchInput.addEventListener('keydown', (event) => {
+        searchButton.addEventListener('click', () => handleSearch(searchInput.value));
+        searchInput.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
-                handleSearch(ui.searchInput.value);
+                handleSearch(searchInput.value);
             }
         });
 
@@ -1606,38 +1624,38 @@
         document.body.addEventListener('click', function(event) {
             if (event.target.classList.contains('clickable-word') && !event.target.closest('#list-modal-container')) {
                 const word = event.target.textContent.split('(')[0].trim();
-                ui.searchInput.value = word;
+                searchInput.value = word;
                 handleSearch(word);
             }
         });
 
-        ui.listModalContainer.addEventListener('click', (e) => {
+        listModalContainer.addEventListener('click', (e) => {
             const targetWordItem = e.target.closest('.searchable-list-item');
             
             if (targetWordItem) {
                 const word = targetWordItem.dataset.word;
                 if (word) {
                     hideListModal();
-                    ui.searchInput.value = word;
+                    searchInput.value = word;
                     handleSearch(word);
                 }
             } else if (e.target.classList.contains('clickable-word')) {
                  const word = e.target.textContent.split('(')[0].trim();
                  if (word) {
                     hideListModal();
-                    ui.searchInput.value = word;
+                    searchInput.value = word;
                     handleSearch(word);
                  }
             }
         });
 
-        ui.sortOptions.addEventListener('change', (e) => {
+        sortOptions.addEventListener('change', (e) => {
             currentSort = e.target.value;
             renderList();
         });
-        ui.deleteSelectedBtn.addEventListener('click', () => performBulkAction('delete'));
-        ui.markReadBtn.addEventListener('click', () => performBulkAction('mark-read'));
-        ui.markUnreadBtn.addEventListener('click', () => performBulkAction('mark-unread'));
+        document.getElementById('delete-selected-btn').addEventListener('click', () => performBulkAction('delete'));
+        document.getElementById('mark-read-btn').addEventListener('click', () => performBulkAction('mark-read'));
+        document.getElementById('mark-unread-btn').addEventListener('click', () => performBulkAction('mark-unread'));
         
         // ---------------------------
         // 10. 앱 초기화 및 툴팁
@@ -1662,11 +1680,11 @@
                     if (!word) return;
 
                     const rect = target.getBoundingClientRect();
-                    ui.wordTooltip.style.left = `${rect.left + window.scrollX + rect.width / 2}px`;
-                    ui.wordTooltip.style.top = `${rect.top + window.scrollY}px`;
-                    ui.wordTooltip.style.transform = 'translate(-50%, -110%)';
-                    ui.wordTooltip.textContent = '번역 중...';
-                    ui.wordTooltip.classList.remove('hidden');
+                    wordTooltip.style.left = `${rect.left + window.scrollX + rect.width / 2}px`;
+                    wordTooltip.style.top = `${rect.top + window.scrollY}px`;
+                    wordTooltip.style.transform = 'translate(-50%, -110%)';
+                    wordTooltip.textContent = '번역 중...';
+                    wordTooltip.classList.remove('hidden');
 
                     let translation;
                     if (translationCache[word]) {
@@ -1681,22 +1699,22 @@
                             translation = '번역 실패';
                         }
                     }
-                    ui.wordTooltip.textContent = translation;
+                    wordTooltip.textContent = translation;
                 }
             });
 
             document.body.addEventListener('mouseout', (event) => {
                 const target = event.target.closest('.clickable-word');
                 if (target) {
-                    ui.wordTooltip.classList.add('hidden');
+                    wordTooltip.classList.add('hidden');
                 }
             });
 
             const urlParams = new URLSearchParams(window.location.search);
             const queryFromUrl = urlParams.get('q');
             if (queryFromUrl) {
-                ui.searchInput.value = decodeURIComponent(queryFromUrl);
-                handleSearch(ui.searchInput.value);
+                searchInput.value = decodeURIComponent(queryFromUrl);
+                handleSearch(searchInput.value);
             }
         });
         
@@ -1704,8 +1722,11 @@
         // 11. 파일 보관함 기능
         // ---------------------------
 
-        ui.fileUploadButton.addEventListener('click', () => {
-            const file = ui.fileUploadInput.files[0];
+        const fileUploadInput = document.getElementById('file-upload-input');
+        const fileUploadButton = document.getElementById('file-upload-button');
+        
+        fileUploadButton.addEventListener('click', () => {
+            const file = fileUploadInput.files[0];
             if (!file) {
                 showToast("파일을 선택해주세요.", "warning");
                 return;
@@ -1718,24 +1739,25 @@
 
             const storageRef = storage.ref(`users/${userId}/${file.name}`);
             const uploadTask = storageRef.put(file);
-
-            ui.uploadProgressContainer.classList.remove('hidden');
+            const uploadProgressContainer = document.getElementById('upload-progress-container');
+            const uploadProgressBar = document.getElementById('upload-progress-bar');
+            uploadProgressContainer.classList.remove('hidden');
 
             uploadTask.on('state_changed', 
                 (snapshot) => {
                     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    ui.uploadProgressBar.style.width = progress + '%';
+                    uploadProgressBar.style.width = progress + '%';
                 }, 
                 (error) => {
                     console.error("Upload failed:", error);
                     showToast("파일 업로드에 실패했습니다.", "error");
-                    ui.uploadProgressContainer.classList.add('hidden');
+                    uploadProgressContainer.classList.add('hidden');
                 }, 
                 () => {
-                    ui.uploadProgressContainer.classList.add('hidden');
+                    uploadProgressContainer.classList.add('hidden');
                     showToast("파일이 성공적으로 업로드되었습니다.", "success");
                     loadFiles();
-                    ui.fileUploadInput.value = ''; // Reset input
+                    fileUploadInput.value = ''; // Reset input
                 }
             );
         });
