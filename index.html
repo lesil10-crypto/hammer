@@ -312,7 +312,7 @@
         const loadingText = document.getElementById('loading-text');
         const progressBar = document.getElementById('progress-bar');
         
-        const googleAiApiKey = ""; 
+        const apiKey = ""; 
         const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent`;
         const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict`;
         
@@ -363,8 +363,8 @@
         // 1. API 통신 함수
         // ---------------------------
 
-        async function fetchWithRetry(url, payload, retries = 3) {
-            const finalUrl = `${url}?key=${googleAiApiKey}`;
+        async function fetchWithRetry(baseUrl, payload, retries = 3) {
+            const finalUrl = `${baseUrl}?key=${apiKey}`;
             for (let i = 0; i < retries; i++) {
                 try {
                     const response = await fetch(finalUrl, {
@@ -409,7 +409,7 @@
 
         async function callImagen(prompt) {
              const payload = { 
-                 instances: { prompt: prompt },
+                 instances: [{ prompt: prompt }],
                  parameters: { "sampleCount": 1 }
              };
             const result = await fetchWithRetry(imageApiUrl, payload);
@@ -1574,4 +1574,4 @@
 </body>
 </html>
 
-           
+          
