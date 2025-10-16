@@ -197,7 +197,7 @@
     </style>
 </head>
 <body class="bg-slate-100 text-gray-800">
-    <div id="app-container">
+    <div id="app-container" style="visibility: hidden;">
         <div class="max-w-4xl mx-auto p-4 pb-24">
             <!-- Header -->
             <header class="text-center my-8 flex justify-center items-center">
@@ -345,7 +345,7 @@
     <script type="module">
         // Firebase Modular SDK imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, addDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll, getMetadata } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
@@ -366,10 +366,8 @@
 
         // Firebase Setup
         let db, auth, storage, userId, app;
-        
-        // Use global variables provided by the environment for configuration
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-ai-vocab-app';
         
         // Tab Management
         let tabs = {};
@@ -400,7 +398,7 @@
                 // Once signed in, show the app and load data
                 document.getElementById('app-container').style.visibility = 'visible';
                 loadUserLists();
-                loadFiles();
+                listenForFiles(); // Changed from loadFiles()
                 safeCreateIcons();
 
             } catch (error) {
@@ -409,8 +407,6 @@
             }
         }
         
-        // The signIn function is no longer needed and has been removed.
-
         // ---------------------------
         // 1. API Communication Functions
         // ---------------------------
@@ -1130,7 +1126,7 @@
         window.showFileModal = function() {
             fileModalContainer.classList.remove('hidden');
             fileModalContainer.classList.add('flex');
-            loadFiles();
+            // loadFiles() is no longer called here directly; onSnapshot handles updates.
         }
 
         window.hideFileModal = function(event) {
@@ -1167,6 +1163,7 @@
         
         async function addWordToHistory(word, meaning) {
              if (!db || !userId) return;
+             // Firestore path now includes the required prefix for security rules
              const wordRef = doc(db, `artifacts/${appId}/users/${userId}/saved_words/${word}`);
              try {
                  await setDoc(wordRef, { word, meaning, timestamp: new Date(), read: false }, { merge: true });
@@ -1181,6 +1178,7 @@
                 return;
             }
             try {
+                // Firestore path now includes the required prefix for security rules
                 const sentenceRef = collection(db, `artifacts/${appId}/users/${userId}/saved_sentences`);
                 await addDoc(sentenceRef, { en, ko, timestamp: new Date(), read: false });
                 showToast("예문이 저장되었습니다.", "success");
@@ -1193,12 +1191,14 @@
         function loadUserLists() {
             if (!db || !userId) return;
 
+            // Firestore path now includes the required prefix for security rules
             const wordsQuery = collection(db, `artifacts/${appId}/users/${userId}/saved_words`);
             onSnapshot(wordsQuery, (snapshot) => {
                 savedWords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if(currentListType === 'words') renderList();
             }, (error) => console.error("Error loading words:", error));
 
+            // Firestore path now includes the required prefix for security rules
             const sentencesQuery = collection(db, `artifacts/${appId}/users/${userId}/saved_sentences`);
             onSnapshot(sentencesQuery, (snapshot) => {
                 savedSentences = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1465,264 +1465,24 @@
 
         function handlePrint(tabId) {
             const tab = tabs[tabId];
-            const data = tab.fullSearchResult;
-            if (!data || !data.encyclopediaData) {
+            if (!tab || !tab.fullSearchResult || !tab.fullSearchResult.encyclopediaData) {
                 showToast("인쇄 데이터가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.", "warning");
                 return;
             }
-
-            const printHtml = generatePrintableHtml(data);
             
-            const printFrame = document.createElement('iframe');
-            printFrame.style.position = 'absolute';
-            printFrame.style.width = '0';
-            printFrame.style.height = '0';
-            printFrame.style.border = '0';
-            document.body.appendChild(printFrame);
+            // Set the active class for the print media query
+            const currentlyActive = document.querySelector('.active-tab-content');
+            if (currentlyActive) {
+                currentlyActive.classList.remove('active-tab-content');
+            }
+            tab.contentEl.classList.add('active-tab-content');
             
-            const frameDoc = printFrame.contentWindow.document;
-            frameDoc.open();
-            frameDoc.write(printHtml);
-            frameDoc.close();
-            
-            setTimeout(() => {
-                try {
-                    printFrame.contentWindow.focus();
-                    printFrame.contentWindow.print();
-                } catch(e) {
-                    console.error("Print failed:", e);
-                    showToast("인쇄에 실패했습니다. 팝업 차단을 확인해주세요.", "error");
-                } finally {
-                     document.body.removeChild(printFrame);
-                }
-            }, 500);
+            window.print();
         }
 
-        function generatePrintableHtml(data) {
-            const { initialData, mainImageUrl, episodeImageUrl, meaningsData, fastDeepDiveData, encyclopediaData } = data;
-
-            const renderPrintSection = (title, content) => {
-                if (!content) return '';
-                return `<div style="margin-top: 2rem; page-break-inside: avoid;"><h2 style="font-size: 1.5rem; font-weight: bold; border-bottom: 2px solid #ccc; padding-bottom: 0.5rem; margin-bottom: 1rem;">${title}</h2>${content}</div>`;
-            };
-
-            const basicInfoHtml = `
-                <div style="display: flex; align-items: center; gap: 2rem;">
-                    <img src="${mainImageUrl || ''}" style="width: 200px; height: auto; border-radius: 8px;">
-                    <div>
-                        <p style="font-size: 2rem; font-weight: bold;">${initialData.word}</p>
-                        <p style="font-size: 1.5rem;">${initialData.koreanMeaning}</p>
-                        <p style="font-size: 1.2rem; color: #555;">[${initialData.pronunciation}]</p>
-                    </div>
-                </div>`;
-
-            const episodeHtml = `<img src="${episodeImageUrl || ''}" style="max-width: 400px; display: block; margin: 1rem auto; border-radius: 8px;"><p><b>(영문)</b> ${initialData.episode.story}</p><p><b>(한글)</b> ${initialData.episode.story_ko}</p>`;
-            
-            const meaningsHtml = (meaningsData || []).map(m => `
-                    <div style="margin-top: 1rem; page-break-inside: avoid;">
-                        <h4 style="font-size: 1.2rem; font-weight: bold; color: #005a9c;">${m.type}</h4>
-                        <img src="${m.imageUrl || ''}" style="max-width: 400px; display: block; margin: 1rem auto; border-radius: 8px;">
-                        <p>${m.description}</p>
-                        <div style="background-color: #f0f0f0; padding: 1rem; border-radius: 5px; margin: 0.5rem 0;">
-                            <p><b>대표 예문:</b> ${m.exampleSentence}</p>
-                            <p><em>${m.exampleSentenceTranslation}</em></p>
-                        </div>
-                        <ul style="list-style-position: inside; padding-left: 0;">
-                            ${(m.examples || []).map(ex => `<li><b>${ex.en}</b><br><em>${ex.ko}</em></li>`).join('')}
-                        </ul>
-                    </div>
-                `).join('<hr style="border: 0; border-top: 1px solid #ddd; margin: 1rem 0;">');
-
-            const quotesHtml = (fastDeepDiveData.quotes || []).map(q => `<div style="border-left: 3px solid #ccc; padding-left: 1rem; margin-bottom: 1rem;"><p><b>"${q.quote}"</b></p><p><em>${q.translation}</em></p></div>`).join('');
-            const synAntHtml = `<div><h4>유의어</h4><p>${(fastDeepDiveData.synonyms || []).join(', ')}</p></div><div><h4>반의어</h4><p>${(fastDeepDiveData.antonyms || []).join(', ')}</p></div>`;
-            const dialogueHtml = (fastDeepDiveData.dialogue || []).map(d => `<p><b>${d.speaker}:</b> ${d.line} <br><em>${d.translation}</em></p>`).join('');
-            const quizHtml = (fastDeepDiveData.quiz || []).map(q => `
-                <div style="margin-top: 1rem;">
-                    <p><b>문제: ${q.question}</b></p>
-                    <ul>${(q.options || []).map(o => `<li>${o}</li>`).join('')}</ul>
-                    <p><b>정답:</b> ${q.answer}</p>
-                    <p><b>해설:</b> ${q.explanation}</p>
-                </div>
-            `).join('');
-
-            const fullDeepDiveHtml = renderPrintSection('관련 명언/문구', quotesHtml) + renderPrintSection('유의어 및 반의어', synAntHtml) + renderPrintSection('AI 시나리오 학습', dialogueHtml) + renderPrintSection('4지선다 퀴즈', quizHtml);
-
-            const conceptTreeData = fastDeepDiveData.conceptTree || {};
-            const createConceptList = (title, items) => {
-                if (!items || items.length === 0) return '';
-                return `<div><h4 style="font-weight: bold; margin-top: 1rem;">${title}</h4><p>${items.join(', ')}</p></div>`;
-            };
-            const conceptTreeHtml = createConceptList('상위 개념', conceptTreeData.superordinate) + createConceptList('동위 개념', conceptTreeData.coordinate) + createConceptList('하위 개념', conceptTreeData.subordinate);
-
-            const encData = encyclopediaData.encyclopedia || {};
-            const encyclopediaHtml = `
-                <div>
-                    <h3 style="font-size: 1.2rem; font-weight: bold; margin-top: 1.5rem;">서론 (Introduction)</h3><p>${(encData.introduction_ko || '').replace(/\n/g, '<br>')}</p>
-                    <h3 style="font-size: 1.2rem; font-weight: bold; margin-top: 1.5rem;">어원 (Etymology)</h3><p>${(encData.etymology_ko || '').replace(/\n/g, '<br>')}</p>
-                    <h3 style="font-size: 1.2rem; font-weight: bold; margin-top: 1.5rem;">역사적 배경 (Historical Background)</h3><p>${(encData.history_ko || '').replace(/\n/g, '<br>')}</p>
-                    <h3 style="font-size: 1.2rem; font-weight: bold; margin-top: 1.5rem;">문학/현대에서의 사용 (Usage)</h3><p>${(encData.usage_ko || '').replace(/\n/g, '<br>')}</p>
-                </div>`;
-
-            return `<!DOCTYPE html><html><head><title>Print - ${initialData.word}</title>
-                <style>
-                    body { font-family: 'Noto Sans KR', sans-serif; line-height: 1.6; color: #333; }
-                    h1, h2, h3, h4 { font-weight: bold; }
-                    img { max-width: 400px; height: auto; border-radius: 8px; margin: 1rem auto; display: block; page-break-inside: avoid; }
-                    .page-break { page-break-before: always; }
-                    @media print { body { font-family: 'Times New Roman', serif; } }
-                </style>
-                <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
-                </head><body>
-                    <h1 style="font-size: 3rem; text-align: center;">${initialData.word}</h1><hr>
-                    ${renderPrintSection('기본 정보', basicInfoHtml)}
-                    ${renderPrintSection('재미있는 에피소드', episodeHtml)}
-                    ${renderPrintSection('의미 분석', meaningsHtml)}
-                    <div class="page-break"></div>
-                    ${renderPrintSection('심화 학습', fullDeepDiveHtml)}
-                    <div class="page-break"></div>
-                    ${renderPrintSection('개념 트리', conceptTreeHtml)}
-                    ${renderPrintSection('백과사전식 설명', encyclopediaHtml)}
-                </body></html>`;
-        }
-
-
         // ---------------------------
-        // 9. Event Listeners
+        // 9. File Storage (Rearchitected)
         // ---------------------------
-        
-        searchButton.addEventListener('click', () => handleSearch(searchInput.value));
-        searchInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                handleSearch(searchInput.value);
-            }
-        });
-
-        document.getElementById('word-list-btn').addEventListener('click', () => showListModal('words'));
-        document.getElementById('sentence-list-btn').addEventListener('click', () => showListModal('sentences'));
-        document.getElementById('file-storage-btn').addEventListener('click', showFileModal);
-        document.getElementById('share-btn').addEventListener('click', () => {
-             // Use document.execCommand as a fallback for iframe environments
-            const urlToCopy = window.location.href;
-            const textArea = document.createElement("textarea");
-            textArea.value = urlToCopy;
-            textArea.style.position = "fixed"; 
-            textArea.style.left = "-9999px";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                showToast("주소가 복사되었습니다!", "success");
-            } catch (err) {
-                console.error('Fallback: Oops, unable to copy', err);
-                showToast("주소 복사에 실패했습니다.", "error");
-            }
-            document.body.removeChild(textArea);
-        });
-        
-        document.body.addEventListener('click', function(event) {
-            if (event.target.classList.contains('clickable-word') && !event.target.closest('#list-modal-container')) {
-                const word = event.target.textContent.split('(')[0].trim();
-                searchInput.value = word;
-                handleSearch(word);
-            }
-        });
-
-        listModalContainer.addEventListener('click', (e) => {
-            const targetWordItem = e.target.closest('.searchable-list-item');
-            
-            if (targetWordItem) {
-                const word = targetWordItem.dataset.word;
-                if (word) {
-                    hideListModal();
-                    searchInput.value = word;
-                    handleSearch(word);
-                }
-            } else if (e.target.classList.contains('clickable-word')) {
-                 const word = e.target.textContent.split('(')[0].trim();
-                 if (word) {
-                    hideListModal();
-                    searchInput.value = word;
-                    handleSearch(word);
-                 }
-            }
-        });
-
-        sortOptions.addEventListener('change', (e) => {
-            currentSort = e.target.value;
-            renderList();
-        });
-        document.getElementById('delete-selected-btn').addEventListener('click', () => performBulkAction('delete'));
-        document.getElementById('mark-read-btn').addEventListener('click', () => performBulkAction('mark-read'));
-        document.getElementById('mark-unread-btn').addEventListener('click', () => performBulkAction('mark-unread'));
-        
-        // ---------------------------
-        // 10. App Initialization & Tooltip
-        // ---------------------------
-        
-        function safeCreateIcons() {
-            if (window.lucide) {
-                lucide.createIcons();
-            } else {
-                setTimeout(safeCreateIcons, 50);
-            }
-        }
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            // Hide app container initially until auth is ready
-            document.getElementById('app-container').style.visibility = 'hidden';
-            safeCreateIcons();
-            initializeFirebase();
-
-            document.body.addEventListener('mouseover', async (event) => {
-                const target = event.target.closest('.clickable-word');
-                if (target) {
-                    const word = target.textContent.toLowerCase().replace(/[^a-z]/g, '');
-                    if (!word) return;
-
-                    const rect = target.getBoundingClientRect();
-                    wordTooltip.style.left = `${rect.left + window.scrollX + rect.width / 2}px`;
-                    wordTooltip.style.top = `${rect.top + window.scrollY}px`;
-                    wordTooltip.style.transform = 'translate(-50%, -110%)';
-                    wordTooltip.textContent = '번역 중...';
-                    wordTooltip.classList.remove('hidden');
-
-                    let translation;
-                    if (translationCache[word]) {
-                        translation = translationCache[word];
-                    } else {
-                        try {
-                            const prompt = `Translate the English word "${word}" into its primary Korean meaning. Provide only the Korean word or a short phrase, without any additional explanation or quotation marks.`;
-                            translation = await callGemini(prompt);
-                            translationCache[word] = translation;
-                        } catch (error) {
-                            console.error('Translation failed:', error);
-                            translation = '번역 실패';
-                        }
-                    }
-                    wordTooltip.textContent = translation;
-                }
-            });
-
-            document.body.addEventListener('mouseout', (event) => {
-                const target = event.target.closest('.clickable-word');
-                if (target) {
-                    wordTooltip.classList.add('hidden');
-                }
-            });
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const queryFromUrl = urlParams.get('q');
-            if (queryFromUrl) {
-                searchInput.value = decodeURIComponent(queryFromUrl);
-                handleSearch(searchInput.value);
-            }
-        });
-        
-        // ---------------------------
-        // 11. File Storage Functions
-        // ---------------------------
-
         const fileUploadInput = document.getElementById('file-upload-input');
         const fileUploadButton = document.getElementById('file-upload-button');
         
@@ -1754,50 +1514,67 @@
                     showToast("파일 업로드에 실패했습니다.", "error");
                     uploadProgressContainer.classList.add('hidden');
                 }, 
-                () => {
-                    uploadProgressContainer.classList.add('hidden');
-                    showToast("파일이 성공적으로 업로드되었습니다.", "success");
-                    loadFiles();
-                    fileUploadInput.value = ''; // Reset input
+                async () => {
+                    try {
+                        const metadata = uploadTask.snapshot.metadata;
+                        await addDoc(collection(db, `artifacts/${appId}/users/${userId}/file_metadata`), {
+                            name: metadata.name,
+                            fullPath: metadata.fullPath,
+                            size: metadata.size,
+                            contentType: metadata.contentType,
+                            timestamp: new Date()
+                        });
+                        uploadProgressContainer.classList.add('hidden');
+                        showToast("파일이 성공적으로 업로드되었습니다.", "success");
+                        fileUploadInput.value = '';
+                    } catch (error) {
+                        console.error("Error saving file metadata:", error);
+                        showToast("파일 정보 저장에 실패했습니다.", "error");
+                        // Attempt to delete orphaned file in storage
+                        await deleteObject(uploadTask.snapshot.ref).catch(err => console.error("Orphaned file cleanup failed:", err));
+                    }
                 }
             );
         });
 
-        function loadFiles() {
-            if (!storage || !userId) return;
-            const listRef = ref(storage, `artifacts/${appId}/users/${userId}/files`);
-            const fileListDiv = document.getElementById('file-list');
-            fileListDiv.innerHTML = '<div class="loader mx-auto"></div>';
+        function listenForFiles() {
+            if (!db || !userId) return;
+            const filesQuery = collection(db, `artifacts/${appId}/users/${userId}/file_metadata`);
+            onSnapshot(filesQuery, (snapshot) => {
+                const files = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderFileList(files);
+            }, (error) => {
+                console.error("Error listening for files:", error);
+                const fileListDiv = document.getElementById('file-list');
+                fileListDiv.innerHTML = '<p class="text-center text-red-500">파일 목록을 불러오는 데 실패했습니다.</p>';
+            });
+        }
 
-            listAll(listRef)
-                .then((res) => {
-                    if (res.items.length === 0) {
-                        fileListDiv.innerHTML = '<p class="text-center text-gray-500">업로드된 파일이 없습니다.</p>';
-                        return;
-                    }
-                    fileListDiv.innerHTML = '';
-                    res.items.forEach((itemRef) => {
-                        getMetadata(itemRef).then(metadata => {
-                            const fileElement = document.createElement('div');
-                            fileElement.className = 'flex items-center justify-between p-2 rounded-lg hover:bg-slate-200';
-                            fileElement.innerHTML = `
-                                <div class="truncate">
-                                    <p class="font-semibold truncate">${metadata.name}</p>
-                                    <p class="text-sm text-gray-500">${(metadata.size / 1024 / 1024).toFixed(2)} MB</p>
-                                </div>
-                                <div class="flex items-center gap-1 flex-shrink-0">
-                                    <button class="icon-btn" onclick="downloadFile('${itemRef.fullPath}')"><i data-lucide="download"></i></button>
-                                    <button class="icon-btn text-red-500" onclick="deleteFile('${itemRef.fullPath}')"><i data-lucide="trash-2"></i></button>
-                                </div>
-                            `;
-                            fileListDiv.appendChild(fileElement);
-                            safeCreateIcons();
-                        });
-                    });
-                }).catch((error) => {
-                    console.error("Error listing files:", error);
-                    fileListDiv.innerHTML = '<p class="text-center text-red-500">파일을 불러오는 데 실패했습니다.</p>';
-                });
+        function renderFileList(files) {
+            const fileListDiv = document.getElementById('file-list');
+            if (files.length === 0) {
+                fileListDiv.innerHTML = '<p class="text-center text-gray-500">업로드된 파일이 없습니다.</p>';
+                return;
+            }
+            fileListDiv.innerHTML = '';
+            files.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
+
+            files.forEach(fileData => {
+                const fileElement = document.createElement('div');
+                fileElement.className = 'flex items-center justify-between p-2 rounded-lg hover:bg-slate-200';
+                fileElement.innerHTML = `
+                    <div class="truncate">
+                        <p class="font-semibold truncate">${fileData.name}</p>
+                        <p class="text-sm text-gray-500">${(fileData.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                        <button class="icon-btn" onclick="downloadFile('${fileData.fullPath}')"><i data-lucide="download"></i></button>
+                        <button class="icon-btn text-red-500" onclick="deleteFile('${fileData.id}', '${fileData.fullPath}')"><i data-lucide="trash-2"></i></button>
+                    </div>
+                `;
+                fileListDiv.appendChild(fileElement);
+            });
+            safeCreateIcons();
         }
         
         window.downloadFile = function(fullPath) {
@@ -1805,7 +1582,7 @@
                 .then((url) => {
                     const a = document.createElement('a');
                     a.href = url;
-                    a.target = '_blank'; // Open in new tab to download
+                    a.target = '_blank';
                     a.click();
                 })
                 .catch((error) => {
@@ -1814,18 +1591,34 @@
                 });
         }
 
-        window.deleteFile = function(fullPath) {
-            showConfirmationModal("정말로 이 파일을 삭제하시겠습니까?", () => {
+        window.deleteFile = function(docId, fullPath) {
+            showConfirmationModal("정말로 이 파일을 삭제하시겠습니까?", async () => {
                 const fileRef = ref(storage, fullPath);
-                deleteObject(fileRef).then(() => {
+                const docRef = doc(db, `artifacts/${appId}/users/${userId}/file_metadata/${docId}`);
+                try {
+                    await deleteObject(fileRef);
+                    await deleteDoc(docRef);
                     showToast("파일이 삭제되었습니다.", "success");
-                    loadFiles();
-                }).catch((error) => {
+                } catch (error) {
                     console.error("Error deleting file:", error);
-                    showToast("파일 삭제에 실패했습니다.", "error");
-                });
+                    if (error.code === 'storage/object-not-found') {
+                         try {
+                             await deleteDoc(docRef);
+                             showToast("파일 정보가 정리되었습니다.", "info");
+                         } catch (dbError) {
+                             console.error("Error deleting orphaned metadata:", dbError);
+                             showToast("파일 삭제에 실패했습니다.", "error");
+                         }
+                    } else {
+                         showToast("파일 삭제에 실패했습니다.", "error");
+                    }
+                }
             });
         }
+        
+        // ---------------------------
+        // 10. Advanced AI Interactions
+        // ---------------------------
 
         window.expandStory = async function(button, word, story, story_ko) {
             button.disabled = true;
@@ -1892,6 +1685,108 @@
                 button.disabled = false;
             }
         }
+        
+        // ---------------------------
+        // 11. Initializers and Event Listeners
+        // ---------------------------
+        
+        function safeCreateIcons() {
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        }
+        
+        async function translateWordOnHover(word, element) {
+            if (translationCache[word]) {
+                 return translationCache[word];
+            }
+            try {
+                const prompt = `Translate the English word "${word}" to Korean. Provide only the most common meaning.`;
+                const translation = await callGemini(prompt);
+                translationCache[word] = translation.trim();
+                return translationCache[word];
+            } catch (error) {
+                console.error("Translation on hover failed:", error);
+                return "번역 실패";
+            }
+        }
+        
+        document.addEventListener('mouseover', async (e) => {
+            if (e.target.classList.contains('clickable-word')) {
+                const word = e.target.textContent.trim().replace(/[^a-zA-Z-]/g, '');
+                if (!word) return;
+
+                const translation = await translateWordOnHover(word, e.target);
+                wordTooltip.textContent = translation;
+                wordTooltip.classList.remove('hidden');
+
+                const rect = e.target.getBoundingClientRect();
+                wordTooltip.style.left = `${rect.left + window.scrollX}px`;
+                wordTooltip.style.top = `${rect.top + window.scrollY - wordTooltip.offsetHeight - 5}px`;
+            }
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            if (e.target.classList.contains('clickable-word')) {
+                wordTooltip.classList.add('hidden');
+            }
+        });
+        
+        document.addEventListener('click', (e) => {
+             if (e.target.classList.contains('clickable-word')) {
+                 const word = e.target.textContent.trim().replace(/[^a-zA-Z-]/g, '');
+                 if (word) {
+                     searchInput.value = word;
+                     handleSearch(word);
+                     hideListModal();
+                 }
+             }
+            if (e.target.classList.contains('searchable-list-item')) {
+                const word = e.target.dataset.word;
+                if(word) {
+                    searchInput.value = word;
+                    handleSearch(word);
+                    hideListModal();
+                }
+            }
+        });
+        
+        searchButton.addEventListener('click', () => handleSearch(searchInput.value.trim()));
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                handleSearch(searchInput.value.trim());
+            }
+        });
+        
+        document.getElementById('word-list-btn').addEventListener('click', () => showListModal('words'));
+        document.getElementById('sentence-list-btn').addEventListener('click', () => showListModal('sentences'));
+        document.getElementById('file-storage-btn').addEventListener('click', showFileModal);
+        
+        document.getElementById('share-btn').addEventListener('click', () => {
+             if(navigator.share) {
+                 navigator.share({
+                     title: 'AI Vocabulary Builder',
+                     text: 'AI와 함께 새로운 단어를 배워보세요!',
+                     url: window.location.href
+                 }).catch(err => console.error("Share failed", err));
+             } else {
+                 navigator.clipboard.writeText(window.location.href);
+                 showToast("링크가 클립보드에 복사되었습니다.", "success");
+             }
+        });
+        
+        sortOptions.addEventListener('change', (e) => {
+            currentSort = e.target.value;
+            renderList();
+        });
+
+        markReadBtn.addEventListener('click', () => performBulkAction('mark-read'));
+        markUnreadBtn.addEventListener('click', () => performBulkAction('mark-unread'));
+        deleteSelectedBtn.addEventListener('click', () => performBulkAction('delete'));
+
+        // App Initialization
+        document.addEventListener('DOMContentLoaded', initializeFirebase);
+
     </script>
 </body>
 </html>
