@@ -200,15 +200,11 @@
     <div id="app-container">
         <div class="max-w-4xl mx-auto p-4 pb-24">
             <!-- Header -->
-            <header class="text-center my-8 flex justify-between items-center">
-                <div></div>
+            <header class="text-center my-8 flex justify-center items-center">
                 <div>
                     <h1 class="text-4xl font-bold text-gray-700" style="text-shadow: 2px 2px 4px #d1d9e6;">AI Vocabulary Builder</h1>
                     <p class="text-gray-500 mt-2">AI와 함께 단어의 모든 것을 탐험하세요</p>
                 </div>
-                <button id="logout-button" class="btn-3d !p-3">
-                    <i data-lucide="log-out"></i>
-                </button>
             </header>
 
             <!-- Search Bar -->
@@ -349,7 +345,7 @@
     <script type="module">
         // Firebase Modular SDK imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, addDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll, getMetadata } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
@@ -396,38 +392,24 @@
                 auth = getAuth(app);
                 storage = getStorage(app);
 
-                onAuthStateChanged(auth, user => {
-                    if (user) {
-                        // User is signed in.
-                        userId = user.uid;
-                        console.log("Authenticated User ID:", userId);
-                        document.getElementById('app-container').style.visibility = 'visible';
-                        loadUserLists();
-                        loadFiles();
-                        safeCreateIcons();
-                    } else {
-                        // User is signed out. Attempt to sign in.
-                         signIn();
-                    }
-                });
+                // Sign in anonymously immediately
+                const userCredential = await signInAnonymously(auth);
+                userId = userCredential.user.uid;
+                console.log("Authenticated Anonymously. User ID:", userId);
+
+                // Once signed in, show the app and load data
+                document.getElementById('app-container').style.visibility = 'visible';
+                loadUserLists();
+                loadFiles();
+                safeCreateIcons();
+
             } catch (error) {
                 console.error("Firebase Initialization/Auth Error: ", error);
                 showToast("데이터베이스 연결 또는 인증에 실패했습니다.", "error");
             }
         }
         
-        async function signIn() {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Sign in failed:", error);
-                showToast("로그인에 실패했습니다.", "error");
-            }
-        }
+        // The signIn function is no longer needed and has been removed.
 
         // ---------------------------
         // 1. API Communication Functions
@@ -1615,12 +1597,6 @@
             }
         });
 
-        document.getElementById('logout-button').addEventListener('click', () => {
-            signOut(auth);
-            // This will trigger onAuthStateChanged, which will re-trigger the sign-in flow
-            showToast("로그아웃 되었습니다. 다시 로그인합니다.", "info");
-        });
-        
         document.getElementById('word-list-btn').addEventListener('click', () => showListModal('words'));
         document.getElementById('sentence-list-btn').addEventListener('click', () => showListModal('sentences'));
         document.getElementById('file-storage-btn').addEventListener('click', showFileModal);
@@ -1762,7 +1738,7 @@
                 return;
             }
 
-            const storageRef = ref(storage, `users/${userId}/files/${file.name}`);
+            const storageRef = ref(storage, `artifacts/${appId}/users/${userId}/files/${file.name}`);
             const uploadTask = uploadBytesResumable(storageRef, file);
             const uploadProgressContainer = document.getElementById('upload-progress-container');
             const uploadProgressBar = document.getElementById('upload-progress-bar');
@@ -1789,7 +1765,7 @@
 
         function loadFiles() {
             if (!storage || !userId) return;
-            const listRef = ref(storage, `users/${userId}/files`);
+            const listRef = ref(storage, `artifacts/${appId}/users/${userId}/files`);
             const fileListDiv = document.getElementById('file-list');
             fileListDiv.innerHTML = '<div class="loader mx-auto"></div>';
 
