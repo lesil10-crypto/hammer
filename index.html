@@ -17,6 +17,9 @@
     <script src="https://unpkg.com/lucide-react@0.292.0/dist/lucide-react.js"></script>
     <script src="https://unpkg.com/lucide-icons@0.378.0/dist/lucide.min.js"></script>
 
+    <!-- FirebaseUI CSS -->
+    <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/4.8.1/firebase-ui-auth.css" />
+
     <style>
         /* Noto Sans KR 폰트 전역 적용 */
         body {
@@ -153,7 +156,7 @@
                 background-color: #fff !important;
                 font-family: 'Times New Roman', serif;
             }
-            #app > header, .sticky, #tab-bar, footer, .modal, .toast, .tooltip {
+            #app-container > header, .sticky, #tab-bar, footer, .modal, .toast, .tooltip, #auth-container {
                 display: none !important;
             }
             #tab-content-container > div {
@@ -162,7 +165,7 @@
             .active-tab-content {
                 display: block !important;
             }
-             #app {
+             #app-container {
                 max-width: 100%;
                 padding: 0;
                 margin: 0;
@@ -192,39 +195,52 @@
     </style>
 </head>
 <body class="bg-slate-100 text-gray-800">
-    <div id="app" class="max-w-4xl mx-auto p-4 pb-24">
-        <!-- 헤더 -->
-        <header class="text-center my-8">
-            <h1 class="text-4xl font-bold text-gray-700" style="text-shadow: 2px 2px 4px #d1d9e6;">AI Vocabulary Builder</h1>
-            <p class="text-gray-500 mt-2">AI와 함께 단어의 모든 것을 탐험하세요</p>
-        </header>
+    <div id="auth-container" class="max-w-md mx-auto mt-20 p-8 card">
+        <h2 class="text-2xl font-bold text-center mb-6">로그인</h2>
+        <div id="firebaseui-auth-container"></div>
+    </div>
 
-        <!-- 검색창 -->
-        <div class="card p-6 mb-8 sticky top-4 z-10">
-            <div class="flex flex-col sm:flex-row gap-4">
-                <input type="text" id="search-input" placeholder="영단어 또는 한글 뜻을 입력하세요..." class="w-full px-4 py-3 text-lg border-2 border-slate-300 bg-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
-                <button id="search-button" class="btn-3d w-full sm:w-auto">
-                    <i data-lucide="search" class="inline-block mr-2"></i> 검색
+    <div id="app-container" class="hidden">
+        <div class="max-w-4xl mx-auto p-4 pb-24">
+            <!-- 헤더 -->
+            <header class="text-center my-8 flex justify-between items-center">
+                <div></div>
+                <div>
+                    <h1 class="text-4xl font-bold text-gray-700" style="text-shadow: 2px 2px 4px #d1d9e6;">AI Vocabulary Builder</h1>
+                    <p class="text-gray-500 mt-2">AI와 함께 단어의 모든 것을 탐험하세요</p>
+                </div>
+                <button id="logout-button" class="btn-3d !p-3">
+                    <i data-lucide="log-out"></i>
                 </button>
-            </div>
-        </div>
+            </header>
 
-        <!-- 로딩 상태 표시줄 -->
-        <div id="loading-container" class="hidden text-center my-10">
-             <div class="loader mx-auto"></div>
-             <p id="loading-text" class="mt-4 text-gray-600 font-semibold"></p>
-             <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                 <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
-             </div>
+            <!-- 검색창 -->
+            <div class="card p-6 mb-8 sticky top-4 z-10">
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <input type="text" id="search-input" placeholder="영단어 또는 한글 뜻을 입력하세요..." class="w-full px-4 py-3 text-lg border-2 border-slate-300 bg-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                    <button id="search-button" class="btn-3d w-full sm:w-auto">
+                        <i data-lucide="search" class="inline-block mr-2"></i> 검색
+                    </button>
+                </div>
+            </div>
+
+            <!-- 로딩 상태 표시줄 -->
+            <div id="loading-container" class="hidden text-center my-10">
+                 <div class="loader mx-auto"></div>
+                 <p id="loading-text" class="mt-4 text-gray-600 font-semibold"></p>
+                 <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                     <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                 </div>
+            </div>
+            
+            <!-- Tab Bar -->
+            <div id="tab-bar" class="flex flex-wrap items-end border-b-2 border-slate-300 mb-4">
+                <!-- Tabs will be dynamically inserted here -->
+            </div>
+            
+            <!-- 콘텐츠 영역 -->
+            <main id="tab-content-container"></main>
         </div>
-        
-        <!-- Tab Bar -->
-        <div id="tab-bar" class="flex flex-wrap items-end border-b-2 border-slate-300 mb-4">
-            <!-- Tabs will be dynamically inserted here -->
-        </div>
-        
-        <!-- 콘텐츠 영역 -->
-        <main id="tab-content-container"></main>
 
         <!-- 고정 하단 메뉴 -->
         <footer class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm shadow-t border-t-2 border-slate-200 z-50">
@@ -236,6 +252,10 @@
                 <button id="sentence-list-btn" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition-colors">
                     <i data-lucide="save-all"></i>
                     <span class="text-xs font-medium">예문 저장</span>
+                </button>
+                <button id="file-storage-btn" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition-colors">
+                    <i data-lucide="folder-archive"></i>
+                    <span class="text-xs font-medium">파일 보관함</span>
                 </button>
                 <button id="share-btn" class="flex flex-col items-center text-gray-600 hover:text-blue-600 transition-colors">
                     <i data-lucide="share-2"></i>
@@ -285,6 +305,29 @@
         </div>
     </div>
 
+    <!-- 파일 보관함 모달 -->
+    <div id="file-modal-container" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center p-4 z-50 modal" onclick="hideFileModal(event)">
+        <div class="bg-slate-100 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col card" onclick="event.stopPropagation()">
+            <div class="p-4 border-b border-slate-300 flex justify-between items-center">
+                <h2 class="text-xl font-bold">파일 보관함</h2>
+                <button onclick="hideFileModal()" class="text-gray-500 hover:text-gray-800"><i data-lucide="x"></i></button>
+            </div>
+            <div class="p-6 border-b border-slate-300">
+                <h3 class="font-semibold mb-2">새 파일 올리기 (50MB 이하)</h3>
+                <input type="file" id="file-upload-input" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                <button id="file-upload-button" class="btn-3d mt-4 w-full">업로드</button>
+                <div id="upload-progress-container" class="hidden mt-2">
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="upload-progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="file-list" class="p-6 overflow-y-auto flex-grow">
+                <!-- 파일 목록이 여기에 표시됩니다. -->
+            </div>
+        </div>
+    </div>
+
 
     <!-- 토스트 메시지 -->
     <div id="toast-container" class="toast fixed bottom-24 right-5 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg">
@@ -296,13 +339,15 @@
 
 
     <!-- Firebase SDK and custom script -->
-    <script type="module">
-        // Firebase SDK imports
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, addDoc, deleteDoc, query, writeBatch, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/ui/4.8.1/firebase-ui-auth.js"></script>
 
+    <script>
+        // Use a self-executing anonymous function to encapsulate the entire script
+        (function() {
         // ---------------------------
         // 0. 초기 설정 및 변수 선언
         // ---------------------------
@@ -312,14 +357,14 @@
         const loadingText = document.getElementById('loading-text');
         const progressBar = document.getElementById('progress-bar');
         
-        const apiKey = "AIzaSyBWHFr5xqAV2xClvmKjLKVFJlWV7P2lodY"; 
+        const apiKey = ""; 
         const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent`;
-        const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict`;
+        const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent`;
         
         const translationCache = {};
 
         // Firebase 설정
-        let db, auth, userId, app, analytics;
+        let db, auth, storage, userId, app;
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const firestoreAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
@@ -330,28 +375,48 @@
         let tabCounter = 0;
         
         // Firestore 데이터베이스 초기화 및 익명 로그인
-        async function initializeFirebase() {
+        function initializeFirebase() {
             try {
-                app = initializeApp(firebaseConfig);
-                analytics = getAnalytics(app);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                setLogLevel('error');
+                if (!firebase.apps.length) {
+                    app = firebase.initializeApp(firebaseConfig);
+                } else {
+                    app = firebase.app(); 
+                }
+       
+                db = firebase.firestore();
+                auth = firebase.auth();
+                storage = firebase.storage();
 
-                onAuthStateChanged(auth, user => {
+                const ui = new firebaseui.auth.AuthUI(auth);
+
+                auth.onAuthStateChanged(user => {
                     if (user) {
+                        // User is signed in.
                         userId = user.uid;
-                        loadUserLists(); 
+                        document.getElementById('auth-container').style.display = 'none';
+                        document.getElementById('app-container').classList.remove('hidden');
+                        loadUserLists();
+                        loadFiles();
+                        safeCreateIcons();
                     } else {
+                        // User is signed out.
                         userId = null;
+                        document.getElementById('auth-container').style.display = 'block';
+                        document.getElementById('app-container').classList.add('hidden');
+                        
+                        ui.start('#firebaseui-auth-container', {
+                            signInOptions: [
+                                firebase.auth.GoogleAuthProvider.PROVIDER_ID
+                            ],
+                            callbacks: {
+                                signInSuccessWithAuthResult: function(authResult, redirectUrl) {
+                                    return false; // Avoid redirects after sign-in.
+                                },
+                            },
+                            signInFlow: 'popup',
+                        });
                     }
                 });
-
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else if (!auth.currentUser) {
-                    await signInAnonymously(auth);
-                }
 
             } catch (error) {
                 console.error("Firebase Initialization/Auth Error: ", error);
@@ -404,18 +469,53 @@
                 throw new Error("Gemini API response is empty.");
             }
 
-            return isJson ? JSON.parse(text.trim()) : text;
+            if (isJson) {
+                let jsonString = text.trim();
+                // Remove markdown code block fences if they exist
+                if (jsonString.startsWith("```json")) {
+                    jsonString = jsonString.slice(7, -3).trim();
+                } else if (jsonString.startsWith("```")) {
+                    jsonString = jsonString.slice(3, -3).trim();
+                }
+                
+                // Sanitize control characters that might break JSON.parse
+                const sanitizedString = jsonString.replace(/[\x00-\x1F]/g, (char) => {
+                    switch (char) {
+                        case '\b': return '\\b';
+                        case '\f': return '\\f';
+                        case '\n': return '\\n';
+                        case '\r': return '\\r';
+                        case '\t': return '\\t';
+                        default:   return '';
+                    }
+                });
+                
+                try {
+                    return JSON.parse(sanitizedString);
+                } catch (error) {
+                    console.error("Failed to parse sanitized JSON:", error);
+                    console.error("Original text from API:", text);
+                    console.error("Sanitized string:", sanitizedString);
+                    throw error; // Re-throw the error after logging context
+                }
+            }
+
+            return text;
         }
 
         async function callImagen(prompt) {
-             const payload = { 
-                 instances: [{ prompt: prompt }],
-                 parameters: { "sampleCount": 1 }
-             };
+             const payload = {
+                  contents: [{
+                      parts: [{ text: prompt }]
+                  }],
+                  generationConfig: {
+                      responseModalities: ['IMAGE']
+                  },
+            };
             const result = await fetchWithRetry(imageApiUrl, payload);
-            const base64Data = result.predictions?.[0]?.bytesBase64Encoded;
+            const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
             if (!base64Data) {
-                console.error("Imagen API response is empty or invalid. Full response:", result);
+                console.error("Image generation API response is empty or invalid. Full response:", result);
                 return `https://placehold.co/300x300/e0e5ec/4a5568?text=Image+Failed`;
             }
             return `data:image/png;base64,${base64Data}`;
@@ -494,7 +594,7 @@
                 renderPrintButton(currentTab);
                 const placeholderImg = "https://placehold.co/300x300/e0e5ec/4a5568?text=Loading...";
                 renderBasicInfo(initialData, placeholderImg, contentContainer);
-                renderEpisode(initialData.episode, placeholderImg, contentContainer);
+                renderEpisode(initialData, placeholderImg, contentContainer);
                 addWordToHistory(initialData.word, initialData.koreanMeaning);
 
                 callImagen(initialData.mainImagePrompt).then(imageUrl => {
@@ -531,6 +631,8 @@
                 if (searchId !== currentTab.searchId) return;
 
                 await renderMeanings(meaningsData, initialData.word, searchId, currentTab, contentContainer);
+                
+                renderSentenceCrafter(initialData.word, contentContainer);
 
                  updateLoader(75, "심화 학습 정보 생성 중...");
                  const fastDeepDivePrompt = `영어 단어 "${initialData.word}"에 대한 심화 학습 콘텐츠를 생성해줘. "encyclopedia"는 제외하고 다음 JSON 형식을 반드시 따라줘:
@@ -636,7 +738,8 @@
             safeCreateIcons();
         }
 
-        function renderEpisode(episode, imageUrl, container) {
+        function renderEpisode(data, imageUrl, container) {
+            const { episode, word } = data;
             const html = `
                 <div class="card p-6">
                     <h3 class="text-2xl font-bold mb-4 flex items-center"><i data-lucide="sparkles" class="mr-2 text-yellow-500"></i>재미있는 에피소드</h3>
@@ -645,7 +748,7 @@
                         <p class="text-lg leading-relaxed">${addClickToSearch(episode.story)}</p>
                         <p class="text-md leading-relaxed text-gray-600">${episode.story_ko}</p>
                     </div>
-                    <div class="mt-2 flex gap-2">
+                    <div class="mt-4 flex flex-col sm:flex-row gap-2">
                          <button class="icon-btn">
                              <i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${episode.story.replace(/'/g, "\\'")}', 'en-US')"></i>
                              <span class="tooltip">영어 듣기</span>
@@ -654,6 +757,7 @@
                              <i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${episode.story_ko.replace(/'/g, "\\'")}', 'ko-KR')"></i>
                              <span class="tooltip">한국어 듣기</span>
                          </button>
+                         <button class="btn-3d flex-grow" onclick="expandStory(this, '${word}', '${episode.story.replace(/'/g, "\\'")}', '${episode.story_ko.replace(/'/g, "\\'")}')">✨ 이야기 더 만들기</button>
                     </div>
                 </div>
             `;
@@ -772,6 +876,24 @@
                     <ul class="list-inside space-y-2">${examplesHtml}</ul>`;
                 container.appendChild(element);
             }
+            safeCreateIcons();
+        }
+        
+        function renderSentenceCrafter(word, container) {
+            const html = `
+                <div class="card p-6">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center"><i data-lucide="sparkles" class="mr-2 text-blue-500"></i>AI 문장 만들기 ✨</h3>
+                    <p class="text-gray-600 mb-4">단어를 사용하고 싶은 상황을 입력하면 AI가 맞춤 예문을 만들어 드립니다. (예: 회의, 친구와의 대화, 이메일 작성)</p>
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <input type="text" id="sentence-context-input" placeholder="상황을 입력하세요..." class="w-full px-4 py-3 text-lg border-2 border-slate-300 bg-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                        <button id="sentence-craft-button" class="btn-3d w-full sm:w-auto" onclick="craftSentences(this, '${word}')">
+                            <i data-lucide="pencil-ruler" class="inline-block mr-2"></i> 생성
+                        </button>
+                    </div>
+                    <div id="sentence-crafter-results" class="mt-4"></div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
             safeCreateIcons();
         }
 
@@ -1040,10 +1162,10 @@
         
         async function addWordToHistory(word, meaning) {
              if (!db || !userId) return;
-             const wordRef = doc(db, `artifacts/${firestoreAppId}/users/${userId}/saved_words/${word}`);
+             const wordRef = db.doc(`artifacts/${firestoreAppId}/users/${userId}/saved_words/${word}`);
              try {
                 // Only save basic info for history, not the full result
-                await setDoc(wordRef, { word, meaning, timestamp: new Date(), read: false }, { merge: true });
+                await wordRef.set({ word, meaning, timestamp: new Date(), read: false }, { merge: true });
              } catch(e){
                  console.error("Error adding word to history: ", e);
              }
@@ -1055,8 +1177,8 @@
                 return;
             }
             try {
-                const sentenceRef = collection(db, `artifacts/${firestoreAppId}/users/${userId}/saved_sentences`);
-                await addDoc(sentenceRef, { en, ko, timestamp: new Date(), read: false });
+                const sentenceRef = db.collection(`artifacts/${firestoreAppId}/users/${userId}/saved_sentences`);
+                await sentenceRef.add({ en, ko, timestamp: new Date(), read: false });
                 showToast("예문이 저장되었습니다.", "success");
             } catch (e) {
                 console.error("Error saving sentence: ", e);
@@ -1067,14 +1189,14 @@
         function loadUserLists() {
             if (!db || !userId) return;
 
-            const wordsQuery = query(collection(db, `artifacts/${firestoreAppId}/users/${userId}/saved_words`));
-            onSnapshot(wordsQuery, (snapshot) => {
+            const wordsQuery = db.collection(`artifacts/${firestoreAppId}/users/${userId}/saved_words`);
+            wordsQuery.onSnapshot((snapshot) => {
                 savedWords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if(currentListType === 'words') renderList();
             }, (error) => console.error("Error loading words:", error));
 
-            const sentencesQuery = query(collection(db, `artifacts/${firestoreAppId}/users/${userId}/saved_sentences`));
-            onSnapshot(sentencesQuery, (snapshot) => {
+            const sentencesQuery = db.collection(`artifacts/${firestoreAppId}/users/${userId}/saved_sentences`);
+            sentencesQuery.onSnapshot((snapshot) => {
                 savedSentences = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if(currentListType === 'sentences') renderList();
             }, (error) => console.error("Error loading sentences:", error));
@@ -1184,9 +1306,9 @@
         window.deleteListItem = async function(id, type) {
             if (!db || !userId) return;
             const collectionName = type === 'words' ? 'saved_words' : 'saved_sentences';
-            const docRef = doc(db, `artifacts/${firestoreAppId}/users/${userId}/${collectionName}/${id}`);
+            const docRef = db.doc(`artifacts/${firestoreAppId}/users/${userId}/${collectionName}/${id}`);
             try {
-                await deleteDoc(docRef);
+                await docRef.delete();
                 showToast("삭제되었습니다.", "success");
             } catch (error) {
                 console.error("Error deleting item:", error);
@@ -1197,12 +1319,12 @@
         window.toggleReadStatus = async function(id, type) {
             if (!db || !userId) return;
             const collectionName = type === 'words' ? 'saved_words' : 'saved_sentences';
-            const docRef = doc(db, `artifacts/${firestoreAppId}/users/${userId}/${collectionName}/${id}`);
+            const docRef = db.doc(`artifacts/${firestoreAppId}/users/${userId}/${collectionName}/${id}`);
             try {
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
+                const docSnap = await docRef.get();
+                if (docSnap.exists) {
                     const currentStatus = docSnap.data().read;
-                    await updateDoc(docRef, { read: !currentStatus });
+                    await docRef.update({ read: !currentStatus });
                 }
             } catch (error) {
                 console.error("Error toggling read status:", error);
@@ -1232,11 +1354,11 @@
                 return;
             }
 
-            const batch = writeBatch(db);
+            const batch = db.batch();
             const collectionName = currentListType === 'words' ? 'saved_words' : 'saved_sentences';
             
             checkedItems.forEach(item => {
-                const docRef = doc(db, `artifacts/${firestoreAppId}/users/${userId}/${collectionName}/${item.dataset.id}`);
+                const docRef = db.doc(`artifacts/${firestoreAppId}/users/${userId}/${collectionName}/${item.dataset.id}`);
                 if (action === 'delete') {
                     batch.delete(docRef);
                 } else {
@@ -1254,7 +1376,9 @@
         }
         
         window.hideListModal = function(event) {
-             if (event && event.currentTarget !== event.target && !event.target.closest('button')) return;
+            if(event) {
+                 if (event.currentTarget !== event.target && !event.target.closest('button')) return;
+            }
              listModalContainer.classList.add('hidden');
              listModalContainer.classList.remove('flex');
         }
@@ -1463,9 +1587,14 @@
                 handleSearch(searchInput.value);
             }
         });
+
+        document.getElementById('logout-button').addEventListener('click', () => {
+            auth.signOut();
+        });
         
         document.getElementById('word-list-btn').addEventListener('click', () => showListModal('words'));
         document.getElementById('sentence-list-btn').addEventListener('click', () => showListModal('sentences'));
+        document.getElementById('file-storage-btn').addEventListener('click', showFileModal);
         document.getElementById('share-btn').addEventListener('click', () => {
             navigator.clipboard.writeText(window.location.href).then(() => {
                 showToast("주소가 복사되었습니다!", "success");
@@ -1488,14 +1617,14 @@
             if (targetWordItem) {
                 const word = targetWordItem.dataset.word;
                 if (word) {
-                    hideListModal();
+                    hideListModal(e);
                     searchInput.value = word;
                     handleSearch(word);
                 }
             } else if (e.target.classList.contains('clickable-word')) {
                  const word = e.target.textContent.split('(')[0].trim();
                  if (word) {
-                    hideListModal();
+                    hideListModal(e);
                     searchInput.value = word;
                     handleSearch(word);
                  }
@@ -1570,6 +1699,131 @@
                 handleSearch(searchInput.value);
             }
         });
+
+        const fileModalContainer = document.getElementById('file-modal-container');
+        
+        function showFileModal() {
+            fileModalContainer.classList.remove('hidden');
+            fileModalContainer.classList.add('flex');
+            loadFiles();
+        }
+
+        function hideFileModal(event) {
+            if (event && event.currentTarget !== event.target && !event.target.closest('button')) return;
+            fileModalContainer.classList.add('hidden');
+            fileModalContainer.classList.remove('flex');
+        }
+
+        async function expandStory(button, word, story, story_ko) {
+            button.disabled = true;
+            button.innerHTML = `<div class="loader w-5 h-5 border-2 border-t-blue-500 inline-block"></div>`;
+            try {
+                const prompt = `You are a creative storyteller. Expand the following short, humorous story about the word "${word}" into a more detailed and engaging narrative of 3-4 paragraphs. Keep the funny and lighthearted tone.\n\nOriginal Story (English): "${story}"\nOriginal Story (Korean): "${story_ko}"\n\nPlease provide the expanded story in both English and Korean. Format your response as a JSON object with "expanded_story_en" and "expanded_story_ko" keys.`;
+                const result = await callGemini(prompt, true);
+                
+                const episodeCard = button.closest('.card');
+                const storyContainer = episodeCard.querySelector('.space-y-2');
+                storyContainer.innerHTML = `
+                    <p class="text-lg leading-relaxed">${addClickToSearch(result.expanded_story_en)}</p>
+                    <p class="text-md leading-relaxed text-gray-600 mt-2">${result.expanded_story_ko}</p>
+                `;
+                button.remove(); // Remove button after expansion
+            } catch (error) {
+                console.error("Failed to expand story:", error);
+                showToast("스토리 확장에 실패했습니다.", "error");
+                button.disabled = false;
+                button.innerHTML = `✨ 이야기 더 만들기`;
+            }
+        }
+        
+        async function craftSentences(button, word) {
+            const contextInput = document.getElementById('sentence-context-input');
+            const context = contextInput.value.trim();
+            if (!context) {
+                showToast("상황을 입력해주세요.", "warning");
+                return;
+            }
+            
+            const resultsContainer = document.getElementById('sentence-crafter-results');
+            resultsContainer.innerHTML = `<div class="loader mx-auto"></div>`;
+            button.disabled = true;
+
+            try {
+                const prompt = `Create 3 example English sentences using the word "${word}" in the context of "${context}". For each sentence, provide a Korean translation. Return the result as a JSON array like this: [{"en": "Sentence 1.", "ko": "번역 1."}, {"en": "Sentence 2.", "ko": "번역 2."}]`;
+                const sentences = await callGemini(prompt, true);
+                
+                const sentencesHtml = sentences.map((s, i) => `
+                     <li class="flex items-start justify-between gap-3 mt-2">
+                        <div class="flex items-start">
+                            <span class="text-gray-500 mr-2">${i + 1}.</span>
+                            <div>
+                                <p class="text-md font-medium">${addClickToSearch(s.en)}</p>
+                                <p class="text-sm text-gray-500">${s.ko}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center flex-shrink-0 gap-1">
+                            <button class="icon-btn"><i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${s.en.replace(/'/g, "\\'")}', 'en-US')"></i><span class="tooltip">영어 듣기</span></button>
+                            <button class="icon-btn"><i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${s.ko.replace(/'/g, "\\'")}', 'ko-KR')"></i><span class="tooltip">한국어 듣기</span></button>
+                            <button class="icon-btn"><i data-lucide="save" class="w-5 h-5" onclick="saveSentence('${s.en.replace(/'/g, "\\'")}', '${s.ko.replace(/'/g, "\\'")}')"></i><span class="tooltip">저장하기</span></button>
+                        </div>
+                    </li>
+                `).join('');
+                resultsContainer.innerHTML = `<ul class="list-inside space-y-2">${sentencesHtml}</ul>`;
+                safeCreateIcons();
+
+            } catch(error) {
+                console.error("Failed to craft sentences:", error);
+                resultsContainer.innerHTML = `<p class="text-red-500">문장 생성에 실패했습니다.</p>`;
+                showToast("문장 생성에 실패했습니다.", "error");
+            } finally {
+                button.disabled = false;
+            }
+        }
+        
+        function loadFiles() {
+            if (!storage || !userId) return;
+            const listRef = storage.ref(`users/${userId}`);
+            const fileListDiv = document.getElementById('file-list');
+            fileListDiv.innerHTML = '<div class="loader mx-auto"></div>';
+
+            listRef.listAll()
+                .then((res) => {
+                    if (res.items.length === 0) {
+                        fileListDiv.innerHTML = '<p class="text-center text-gray-500">업로드된 파일이 없습니다.</p>';
+                        return;
+                    }
+                    fileListDiv.innerHTML = '';
+                    res.items.forEach((itemRef) => {
+                        itemRef.getMetadata().then(metadata => {
+                            const fileElement = document.createElement('div');
+                            fileElement.className = 'flex items-center justify-between p-2 rounded-lg hover:bg-slate-200';
+                            fileElement.innerHTML = `
+                                <div class="truncate">
+                                    <p class="font-semibold truncate">${metadata.name}</p>
+                                    <p class="text-sm text-gray-500">${(metadata.size / 1024 / 1024).toFixed(2)} MB</p>
+                                </div>
+                                <div class="flex items-center gap-1 flex-shrink-0">
+                                    <button class="icon-btn" onclick="downloadFile('${itemRef.fullPath}')"><i data-lucide="download"></i></button>
+                                    <button class="icon-btn text-red-500" onclick="deleteFile('${itemRef.fullPath}')"><i data-lucide="trash-2"></i></button>
+                                </div>
+                            `;
+                            fileListDiv.appendChild(fileElement);
+                            safeCreateIcons();
+                        });
+                    });
+                }).catch((error) => {
+                    console.error("Error listing files:", error);
+                    fileListDiv.innerHTML = '<p class="text-center text-red-500">파일을 불러오는 데 실패했습니다.</p>';
+                });
+        }
+
+        // Make functions available globally
+        window.showFileModal = showFileModal;
+        window.hideFileModal = hideFileModal;
+        window.expandStory = expandStory;
+        window.craftSentences = craftSentences;
+
+        })();
     </script>
 </body>
 </html>
