@@ -351,22 +351,41 @@
         // ---------------------------
         // 0. 초기 설정 및 변수 선언
         // ---------------------------
-        const searchInput = document.getElementById('search-input');
-        const searchButton = document.getElementById('search-button');
-        const loadingContainer = document.getElementById('loading-container');
-        const loadingText = document.getElementById('loading-text');
-        const progressBar = document.getElementById('progress-bar');
         
+        // DOM Elements
+        const uiElements = {
+            searchInput: document.getElementById('search-input'),
+            searchButton: document.getElementById('search-button'),
+            loadingContainer: document.getElementById('loading-container'),
+            loadingText: document.getElementById('loading-text'),
+            progressBar: document.getElementById('progress-bar'),
+            modalContainer: document.getElementById('modal-container'),
+            modalContent: document.getElementById('modal-content'),
+            imageModalContainer: document.getElementById('image-modal-container'),
+            modalImage: document.getElementById('modal-image'),
+            wordTooltip: document.getElementById('word-tooltip'),
+            listModalContainer: document.getElementById('list-modal-container'),
+            listModalTitle: document.getElementById('list-modal-title'),
+            listModalContent: document.getElementById('list-modal-content'),
+            sortOptions: document.getElementById('sort-options'),
+            markReadBtn: document.getElementById('mark-read-btn'),
+            markUnreadBtn: document.getElementById('mark-unread-btn'),
+            deleteSelectedBtn: document.getElementById('delete-selected-btn'),
+            fileModalContainer: document.getElementById('file-modal-container'),
+            fileUploadInput: document.getElementById('file-upload-input'),
+            fileUploadButton: document.getElementById('file-upload-button'),
+            uploadProgressContainer: document.getElementById('upload-progress-container'),
+            uploadProgressBar: document.getElementById('upload-progress-bar'),
+            appContainer: document.getElementById('app-container'),
+            authContainer: document.getElementById('auth-container')
+        };
+        
+        // API & Config
         const apiKey = ""; 
         const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent`;
         const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent`;
         
-        const translationCache = {};
-
         // Firebase 설정
-        let db, auth, storage, userId, app;
-        
-        // 1. Firebase 콘솔에서 복사한 설정을 여기에 붙여넣으세요.
         const firebaseConfig = {
             apiKey: "AIzaSyDKmpQO6htm7jZ2DByUfGnmocZP7dpTJhs",
             authDomain: "projec-48c55.firebaseapp.com",
@@ -378,13 +397,20 @@
         };
         const firestoreAppId = firebaseConfig.projectId || 'default-app-id';
 
-        
-        // Tab Management
+        // App State
+        let db, auth, storage, userId, app;
+        const translationCache = {};
         let tabs = {};
         let activeTabId = null;
         let tabCounter = 0;
+        let currentListType = '';
+        let currentSort = 'newest';
+        let savedWords = [];
+        let savedSentences = [];
         
-        // Firestore 데이터베이스 초기화 및 익명 로그인
+        // ---------------------------
+        // 초기화 함수
+        // ---------------------------
         function initializeFirebase() {
             try {
                 if (!firebase.apps.length) {
@@ -400,19 +426,20 @@
                 const ui = new firebaseui.auth.AuthUI(auth);
 
                 auth.onAuthStateChanged(user => {
+                    const authContainer = document.getElementById('auth-container');
+                    const appContainer = document.getElementById('app-container');
+                    
                     if (user) {
-                        // User is signed in.
                         userId = user.uid;
-                        document.getElementById('auth-container').style.display = 'none';
-                        document.getElementById('app-container').classList.remove('hidden');
+                        if (authContainer) authContainer.style.display = 'none';
+                        if (appContainer) appContainer.classList.remove('hidden');
                         loadUserLists();
                         loadFiles();
                         safeCreateIcons();
                     } else {
-                        // User is signed out.
                         userId = null;
-                        document.getElementById('auth-container').style.display = 'block';
-                        document.getElementById('app-container').classList.add('hidden');
+                        if (authContainer) authContainer.style.display = 'block';
+                        if (appContainer) appContainer.classList.add('hidden');
                         
                         ui.start('#firebaseui-auth-container', {
                             signInOptions: [
@@ -481,14 +508,12 @@
 
             if (isJson) {
                 let jsonString = text.trim();
-                // Remove markdown code block fences if they exist
                 if (jsonString.startsWith("```json")) {
                     jsonString = jsonString.slice(7, -3).trim();
                 } else if (jsonString.startsWith("```")) {
                     jsonString = jsonString.slice(3, -3).trim();
                 }
                 
-                // Sanitize control characters that might break JSON.parse
                 const sanitizedString = jsonString.replace(/[\x00-\x1F]/g, (char) => {
                     switch (char) {
                         case '\b': return '\\b';
@@ -506,7 +531,7 @@
                     console.error("Failed to parse sanitized JSON:", error);
                     console.error("Original text from API:", text);
                     console.error("Sanitized string:", sanitizedString);
-                    throw error; // Re-throw the error after logging context
+                    throw error;
                 }
             }
 
@@ -580,7 +605,7 @@
             currentTab.fullSearchResult = {};
 
             showLoader(0, `"${wordQuery}" 검색을 시작합니다...`);
-            searchButton.disabled = true;
+            uiElements.searchButton.disabled = true;
 
             try {
                 updateLoader(10, "기본 정보 생성 중...");
@@ -704,7 +729,7 @@
                     <p class="text-sm text-gray-500 mt-2">존재하지 않는 단어이거나, 네트워크 문제일 수 있습니다.</p>
                 </div>`;
             } finally {
-                searchButton.disabled = false;
+                uiElements.searchButton.disabled = false;
             }
         }
         
@@ -1033,18 +1058,18 @@
         }
 
         function showLoader(progress, text) {
-            loadingContainer.classList.remove('hidden');
-            progressBar.style.width = `${progress}%`;
-            loadingText.textContent = text;
+            uiElements.loadingContainer.classList.remove('hidden');
+            uiElements.progressBar.style.width = `${progress}%`;
+            uiElements.loadingText.textContent = text;
         }
 
         function updateLoader(progress, text) {
-            progressBar.style.width = `${progress}%`;
-            loadingText.textContent = text;
+            uiElements.progressBar.style.width = `${progress}%`;
+            uiElements.loadingText.textContent = text;
         }
 
         function hideLoader() {
-            loadingContainer.classList.add('hidden');
+            uiElements.loadingContainer.classList.add('hidden');
         }
 
         function addClickToSearch(text) {
@@ -1082,23 +1107,17 @@
         // 5. 모달 및 툴팁 관련 함수
         // ---------------------------
         
-        const modalContainer = document.getElementById('modal-container');
-        const modalContent = document.getElementById('modal-content');
-        const imageModalContainer = document.getElementById('image-modal-container');
-        const modalImage = document.getElementById('modal-image');
-        const wordTooltip = document.getElementById('word-tooltip');
-        
         window.showImageModal = function(src) {
-            modalImage.src = src;
-            imageModalContainer.classList.remove('hidden');
-            imageModalContainer.classList.add('flex');
+            uiElements.modalImage.src = src;
+            uiElements.imageModalContainer.classList.remove('hidden');
+            uiElements.imageModalContainer.classList.add('flex');
             safeCreateIcons();
         }
 
         window.hideImageModal = function() {
-            imageModalContainer.classList.add('hidden');
-            imageModalContainer.classList.remove('flex');
-            modalImage.src = ''; 
+            uiElements.imageModalContainer.classList.add('hidden');
+            uiElements.imageModalContainer.classList.remove('flex');
+            uiElements.modalImage.src = ''; 
         }
 
         function showEncyclopedia(data) {
@@ -1118,7 +1137,7 @@
                 `;
             }
 
-            modalContent.innerHTML = `
+            uiElements.modalContent.innerHTML = `
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-2xl font-bold">백과사전식 설명</h3>
                     <button onclick="hideModal()" class="text-gray-500 hover:text-gray-800"><i data-lucide="x"></i></button>
@@ -1131,8 +1150,8 @@
                 </div>
             `;
             
-            modalContainer.classList.remove('hidden');
-            modalContainer.classList.add('flex');
+            uiElements.modalContainer.classList.remove('hidden');
+            uiElements.modalContainer.classList.add('flex');
             safeCreateIcons();
         }
         
@@ -1141,7 +1160,7 @@
                 if (!items || items.length === 0) return '';
                 return `<div><h4 class="font-semibold text-lg mt-4">${title}</h4><div class="flex flex-wrap gap-2 mt-2">${items.map(item => `<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full clickable-word">${item}</span>`).join('')}</div></div>`
             };
-            modalContent.innerHTML = `
+            uiElements.modalContent.innerHTML = `
                  <div class="flex justify-between items-center mb-4">
                      <h3 class="text-2xl font-bold">개념 트리</h3>
                      <button onclick="hideModal()" class="text-gray-500 hover:text-gray-800"><i data-lucide="x"></i></button>
@@ -1152,23 +1171,33 @@
                      ${createList('하위 개념', data.subordinate)}
                  </div>
             `;
-            modalContainer.classList.remove('hidden');
-            modalContainer.classList.add('flex');
+            uiElements.modalContainer.classList.remove('hidden');
+            uiElements.modalContainer.classList.add('flex');
             safeCreateIcons();
         }
 
         window.hideModal = function(event) {
             if (event && event.currentTarget !== event.target) return;
-            modalContainer.classList.add('hidden');
-            modalContainer.classList.remove('flex');
+            uiElements.modalContainer.classList.add('hidden');
+            uiElements.modalContainer.classList.remove('flex');
+        }
+
+        window.showFileModal = function() {
+            uiElements.fileModalContainer.classList.remove('hidden');
+            uiElements.fileModalContainer.classList.add('flex');
+            loadFiles();
+        }
+
+        window.hideFileModal = function(event) {
+            if (event && event.currentTarget !== event.target && !event.target.closest('button')) return;
+            uiElements.fileModalContainer.classList.add('hidden');
+            uiElements.fileModalContainer.classList.remove('flex');
         }
         
         // ---------------------------
         // 6. Firestore 데이터 관리
         // ---------------------------
         
-        let savedWords = [];
-        let savedSentences = [];
         
         async function addWordToHistory(word, meaning) {
              if (!db || !userId) return;
@@ -1216,36 +1245,25 @@
         // 7. 저장 목록 모달 UI
         // ---------------------------
         
-        const listModalContainer = document.getElementById('list-modal-container');
-        const listModalTitle = document.getElementById('list-modal-title');
-        const listModalContent = document.getElementById('list-modal-content');
-        const sortOptions = document.getElementById('sort-options');
-        const markReadBtn = document.getElementById('mark-read-btn');
-        const markUnreadBtn = document.getElementById('mark-unread-btn');
-        const deleteSelectedBtn = document.getElementById('delete-selected-btn');
-        
-        let currentListType = '';
-        let currentSort = 'newest';
-        
         function showListModal(type) {
             currentListType = type;
-            listModalContainer.classList.remove('hidden');
-            listModalContainer.classList.add('flex');
+            uiElements.listModalContainer.classList.remove('hidden');
+            uiElements.listModalContainer.classList.add('flex');
             
             if (type === 'words') {
-                listModalTitle.textContent = '단어 목록 (검색 기록)';
-                sortOptions.innerHTML = `
+                uiElements.listModalTitle.textContent = '단어 목록 (검색 기록)';
+                uiElements.sortOptions.innerHTML = `
                     <option value="newest">최신순</option>
                     <option value="alphabetical">알파벳순</option>
                 `;
             } else {
-                listModalTitle.textContent = '저장된 예문 목록';
-                 sortOptions.innerHTML = `
+                uiElements.listModalTitle.textContent = '저장된 예문 목록';
+                 uiElements.sortOptions.innerHTML = `
                     <option value="newest">최신순</option>
                     <option value="length">길이순</option>
                 `;
             }
-            sortOptions.value = currentSort;
+            uiElements.sortOptions.value = currentSort;
             renderList();
             updateListActionButtonsState();
         }
@@ -1267,11 +1285,11 @@
             }
             
             if (items.length === 0) {
-                 listModalContent.innerHTML = `<p class="text-center text-gray-500">저장된 항목이 없습니다.</p>`;
+                 uiElements.listModalContent.innerHTML = `<p class="text-center text-gray-500">저장된 항목이 없습니다.</p>`;
                  return;
             }
 
-            listModalContent.innerHTML = items.map(item => {
+            uiElements.listModalContent.innerHTML = items.map(item => {
                 const readClass = item.read ? 'opacity-50' : '';
                 const baseHtml = `
                     <div class="flex items-center justify-between p-3 rounded-lg hover:bg-slate-200 ${readClass}" data-id="${item.id}">
@@ -1343,14 +1361,14 @@
         };
         
         function updateListActionButtonsState() {
-            const checkedItems = listModalContent.querySelectorAll('.item-checkbox:checked');
+            const checkedItems = uiElements.listModalContent.querySelectorAll('.item-checkbox:checked');
             const hasSelection = checkedItems.length > 0;
-            markReadBtn.disabled = !hasSelection;
-            markUnreadBtn.disabled = !hasSelection;
-            deleteSelectedBtn.disabled = !hasSelection;
+            uiElements.markReadBtn.disabled = !hasSelection;
+            uiElements.markUnreadBtn.disabled = !hasSelection;
+            uiElements.deleteSelectedBtn.disabled = !hasSelection;
         }
 
-        listModalContent.addEventListener('change', (e) => {
+        uiElements.listModalContent.addEventListener('change', (e) => {
             if (e.target.classList.contains('item-checkbox')) {
                 updateListActionButtonsState();
             }
@@ -1358,7 +1376,7 @@
 
         async function performBulkAction(action) {
             if (!db || !userId) return;
-            const checkedItems = listModalContent.querySelectorAll('.item-checkbox:checked');
+            const checkedItems = uiElements.listModalContent.querySelectorAll('.item-checkbox:checked');
             if (checkedItems.length === 0) {
                 showToast("항목을 선택해주세요.", "warning");
                 return;
@@ -1389,8 +1407,8 @@
             if(event) {
                  if (event.currentTarget !== event.target && !event.target.closest('button')) return;
             }
-             listModalContainer.classList.add('hidden');
-             listModalContainer.classList.remove('flex');
+             uiElements.listModalContainer.classList.add('hidden');
+             uiElements.listModalContainer.classList.remove('flex');
         }
         
         // ---------------------------
@@ -1591,10 +1609,10 @@
         // 9. 이벤트 리스너
         // ---------------------------
         
-        searchButton.addEventListener('click', () => handleSearch(searchInput.value));
-        searchInput.addEventListener('keydown', (event) => {
+        uiElements.searchButton.addEventListener('click', () => handleSearch(uiElements.searchInput.value));
+        uiElements.searchInput.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
-                handleSearch(searchInput.value);
+                handleSearch(uiElements.searchInput.value);
             }
         });
 
@@ -1616,38 +1634,38 @@
         document.body.addEventListener('click', function(event) {
             if (event.target.classList.contains('clickable-word') && !event.target.closest('#list-modal-container')) {
                 const word = event.target.textContent.split('(')[0].trim();
-                searchInput.value = word;
+                uiElements.searchInput.value = word;
                 handleSearch(word);
             }
         });
 
-        listModalContainer.addEventListener('click', (e) => {
+        uiElements.listModalContainer.addEventListener('click', (e) => {
             const targetWordItem = e.target.closest('.searchable-list-item');
             
             if (targetWordItem) {
                 const word = targetWordItem.dataset.word;
                 if (word) {
                     hideListModal();
-                    searchInput.value = word;
+                    uiElements.searchInput.value = word;
                     handleSearch(word);
                 }
             } else if (e.target.classList.contains('clickable-word')) {
                  const word = e.target.textContent.split('(')[0].trim();
                  if (word) {
                     hideListModal();
-                    searchInput.value = word;
+                    uiElements.searchInput.value = word;
                     handleSearch(word);
                  }
             }
         });
 
-        sortOptions.addEventListener('change', (e) => {
+        uiElements.sortOptions.addEventListener('change', (e) => {
             currentSort = e.target.value;
             renderList();
         });
-        document.getElementById('delete-selected-btn').addEventListener('click', () => performBulkAction('delete'));
-        document.getElementById('mark-read-btn').addEventListener('click', () => performBulkAction('mark-read'));
-        document.getElementById('mark-unread-btn').addEventListener('click', () => performBulkAction('mark-unread'));
+        uiElements.deleteSelectedBtn.addEventListener('click', () => performBulkAction('delete'));
+        uiElements.markReadBtn.addEventListener('click', () => performBulkAction('mark-read'));
+        uiElements.markUnreadBtn.addEventListener('click', () => performBulkAction('mark-unread'));
         
         // ---------------------------
         // 10. 앱 초기화 및 툴팁
@@ -1672,11 +1690,11 @@
                     if (!word) return;
 
                     const rect = target.getBoundingClientRect();
-                    wordTooltip.style.left = `${rect.left + window.scrollX + rect.width / 2}px`;
-                    wordTooltip.style.top = `${rect.top + window.scrollY}px`;
-                    wordTooltip.style.transform = 'translate(-50%, -110%)';
-                    wordTooltip.textContent = '번역 중...';
-                    wordTooltip.classList.remove('hidden');
+                    uiElements.wordTooltip.style.left = `${rect.left + window.scrollX + rect.width / 2}px`;
+                    uiElements.wordTooltip.style.top = `${rect.top + window.scrollY}px`;
+                    uiElements.wordTooltip.style.transform = 'translate(-50%, -110%)';
+                    uiElements.wordTooltip.textContent = '번역 중...';
+                    uiElements.wordTooltip.classList.remove('hidden');
 
                     let translation;
                     if (translationCache[word]) {
@@ -1691,22 +1709,22 @@
                             translation = '번역 실패';
                         }
                     }
-                    wordTooltip.textContent = translation;
+                    uiElements.wordTooltip.textContent = translation;
                 }
             });
 
             document.body.addEventListener('mouseout', (event) => {
                 const target = event.target.closest('.clickable-word');
                 if (target) {
-                    wordTooltip.classList.add('hidden');
+                    uiElements.wordTooltip.classList.add('hidden');
                 }
             });
 
             const urlParams = new URLSearchParams(window.location.search);
             const queryFromUrl = urlParams.get('q');
             if (queryFromUrl) {
-                searchInput.value = decodeURIComponent(queryFromUrl);
-                handleSearch(searchInput.value);
+                uiElements.searchInput.value = decodeURIComponent(queryFromUrl);
+                handleSearch(uiElements.searchInput.value);
             }
         });
         
@@ -1714,26 +1732,8 @@
         // 11. 파일 보관함 기능
         // ---------------------------
 
-        const fileModalContainer = document.getElementById('file-modal-container');
-        const fileUploadInput = document.getElementById('file-upload-input');
-        const fileUploadButton = document.getElementById('file-upload-button');
-        const uploadProgressContainer = document.getElementById('upload-progress-container');
-        const uploadProgressBar = document.getElementById('upload-progress-bar');
-        
-        function showFileModal() {
-            fileModalContainer.classList.remove('hidden');
-            fileModalContainer.classList.add('flex');
-            loadFiles();
-        }
-
-        function hideFileModal(event) {
-            if (event && event.currentTarget !== event.target && !event.target.closest('button')) return;
-            fileModalContainer.classList.add('hidden');
-            fileModalContainer.classList.remove('flex');
-        }
-
-        fileUploadButton.addEventListener('click', () => {
-            const file = fileUploadInput.files[0];
+        uiElements.fileUploadButton.addEventListener('click', () => {
+            const file = uiElements.fileUploadInput.files[0];
             if (!file) {
                 showToast("파일을 선택해주세요.", "warning");
                 return;
@@ -1747,23 +1747,23 @@
             const storageRef = storage.ref(`users/${userId}/${file.name}`);
             const uploadTask = storageRef.put(file);
 
-            uploadProgressContainer.classList.remove('hidden');
+            uiElements.uploadProgressContainer.classList.remove('hidden');
 
             uploadTask.on('state_changed', 
                 (snapshot) => {
                     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    uploadProgressBar.style.width = progress + '%';
+                    uiElements.uploadProgressBar.style.width = progress + '%';
                 }, 
                 (error) => {
                     console.error("Upload failed:", error);
                     showToast("파일 업로드에 실패했습니다.", "error");
-                    uploadProgressContainer.classList.add('hidden');
+                    uiElements.uploadProgressContainer.classList.add('hidden');
                 }, 
                 () => {
-                    uploadProgressContainer.classList.add('hidden');
+                    uiElements.uploadProgressContainer.classList.add('hidden');
                     showToast("파일이 성공적으로 업로드되었습니다.", "success");
                     loadFiles();
-                    fileUploadInput.value = ''; // Reset input
+                    uiElements.fileUploadInput.value = ''; // Reset input
                 }
             );
         });
@@ -1832,9 +1832,71 @@
             });
         }
 
-        // Make functions available globally
-        window.expandStory = expandStory;
-        window.craftSentences = craftSentences;
+        window.expandStory = async function(button, word, story, story_ko) {
+            button.disabled = true;
+            button.innerHTML = `<div class="loader w-5 h-5 border-2 border-t-blue-500 inline-block"></div>`;
+            try {
+                const prompt = `You are a creative storyteller. Expand the following short, humorous story about the word "${word}" into a more detailed and engaging narrative of 3-4 paragraphs. Keep the funny and lighthearted tone.\n\nOriginal Story (English): "${story}"\nOriginal Story (Korean): "${story_ko}"\n\nPlease provide the expanded story in both English and Korean. Format your response as a JSON object with "expanded_story_en" and "expanded_story_ko" keys.`;
+                const result = await callGemini(prompt, true);
+                
+                const episodeCard = button.closest('.card');
+                const storyContainer = episodeCard.querySelector('.space-y-2');
+                storyContainer.innerHTML = `
+                    <p class="text-lg leading-relaxed">${addClickToSearch(result.expanded_story_en)}</p>
+                    <p class="text-md leading-relaxed text-gray-600 mt-2">${result.expanded_story_ko}</p>
+                `;
+                button.remove(); // Remove button after expansion
+            } catch (error) {
+                console.error("Failed to expand story:", error);
+                showToast("스토리 확장에 실패했습니다.", "error");
+                button.disabled = false;
+                button.innerHTML = `✨ 이야기 더 만들기`;
+            }
+        }
+        
+        window.craftSentences = async function(button, word) {
+            const contextInput = document.getElementById('sentence-context-input');
+            const context = contextInput.value.trim();
+            if (!context) {
+                showToast("상황을 입력해주세요.", "warning");
+                return;
+            }
+            
+            const resultsContainer = document.getElementById('sentence-crafter-results');
+            resultsContainer.innerHTML = `<div class="loader mx-auto"></div>`;
+            button.disabled = true;
+
+            try {
+                const prompt = `Create 3 example English sentences using the word "${word}" in the context of "${context}". For each sentence, provide a Korean translation. Return the result as a JSON array like this: [{"en": "Sentence 1.", "ko": "번역 1."}, {"en": "Sentence 2.", "ko": "번역 2."}]`;
+                const sentences = await callGemini(prompt, true);
+                
+                const sentencesHtml = sentences.map((s, i) => `
+                     <li class="flex items-start justify-between gap-3 mt-2">
+                        <div class="flex items-start">
+                            <span class="text-gray-500 mr-2">${i + 1}.</span>
+                            <div>
+                                <p class="text-md font-medium">${addClickToSearch(s.en)}</p>
+                                <p class="text-sm text-gray-500">${s.ko}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center flex-shrink-0 gap-1">
+                            <button class="icon-btn"><i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${s.en.replace(/'/g, "\\'")}', 'en-US')"></i><span class="tooltip">영어 듣기</span></button>
+                            <button class="icon-btn"><i data-lucide="volume-2" class="w-5 h-5" onclick="speak('${s.ko.replace(/'/g, "\\'")}', 'ko-KR')"></i><span class="tooltip">한국어 듣기</span></button>
+                            <button class="icon-btn"><i data-lucide="save" class="w-5 h-5" onclick="saveSentence('${s.en.replace(/'/g, "\\'")}', '${s.ko.replace(/'/g, "\\'")}')"></i><span class="tooltip">저장하기</span></button>
+                        </div>
+                    </li>
+                `).join('');
+                resultsContainer.innerHTML = `<ul class="list-inside space-y-2">${sentencesHtml}</ul>`;
+                safeCreateIcons();
+
+            } catch(error) {
+                console.error("Failed to craft sentences:", error);
+                resultsContainer.innerHTML = `<p class="text-red-500">문장 생성에 실패했습니다.</p>`;
+                showToast("문장 생성에 실패했습니다.", "error");
+            } finally {
+                button.disabled = false;
+            }
+        }
 
         })();
     </script>
