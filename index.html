@@ -1488,14 +1488,14 @@
             if (targetWordItem) {
                 const word = targetWordItem.dataset.word;
                 if (word) {
-                    hideListModal(e);
+                    hideListModal();
                     searchInput.value = word;
                     handleSearch(word);
                 }
             } else if (e.target.classList.contains('clickable-word')) {
                  const word = e.target.textContent.split('(')[0].trim();
                  if (word) {
-                    hideListModal(e);
+                    hideListModal();
                     searchInput.value = word;
                     handleSearch(word);
                  }
@@ -1574,4 +1574,3 @@
 </body>
 </html>
 
-          
