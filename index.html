@@ -351,7 +351,6 @@
 
         // =========================================================================
         // === GitHub/외부 배포 시 여기에 Firebase 구성 정보를 입력하세요 ===
-        // Firebase 콘솔 > 프로젝트 설정 > 일반 탭에서 '웹 앱'의 구성 객체를 복사하여 붙여넣으세요.
         const USER_FIREBASE_CONFIG = {
           apiKey: "AIzaSyDKmpQO6htm7jZ2DByUfGnmocZP7dpTJhs",
           authDomain: "projec-48c55.firebaseapp.com",
@@ -361,6 +360,13 @@
           appId: "1:376464552007:web:929b53196fc86af19dc162",
           measurementId: "G-HMKJMNFGM4"
         };
+        // =========================================================================
+        
+        // =========================================================================
+        // === GitHub/외부 배포 시 여기에 Google AI Studio API 키를 입력하세요 ===
+        // 1. https://aistudio.google.com/app/apikey 로 이동하여 API 키를 생성합니다.
+        // 2. 생성된 키를 아래 따옴표 안에 붙여넣습니다.
+        const USER_GEMINI_API_KEY = "AIzaSyDKmpQO6htm7jZ2DByUfGnmocZP7dpTJhs"; // <-- 키가 통합되었습니다.
         // =========================================================================
 
         // ---------------------------
@@ -372,7 +378,7 @@
         const loadingText = document.getElementById('loading-text');
         const progressBar = document.getElementById('progress-bar');
         
-        const apiKey = ""; 
+        const apiKey = USER_GEMINI_API_KEY; 
         const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent`;
         const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict`;
         
@@ -380,7 +386,7 @@
 
         // Firebase Setup
         let db, auth, storage, userId;
-        let app; // 'app' variable declared here
+        let app; 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-ai-vocab-app';
         
         // Tab Management
@@ -392,7 +398,6 @@
         
         // Firebase Initialization and Authentication
         async function initializeFirebase() {
-            // 미리보기 환경의 __firebase_config를 우선 사용하고, 없을 경우 USER_FIREBASE_CONFIG를 사용합니다.
             const configString = typeof __firebase_config !== 'undefined' ? __firebase_config : JSON.stringify(USER_FIREBASE_CONFIG);
             const firebaseConfig = JSON.parse(configString || '{}');
 
@@ -400,7 +405,7 @@
                 if (!firebaseConfig.apiKey) {
                     console.error("Firebase config is missing.");
                     showToast("Firebase 구성 정보가 없습니다. GitHub 배포 시에는 코드에 직접 입력해야 합니다.", "error");
-                    document.getElementById('app-container').style.visibility = 'visible'; // Show the app to display the error
+                    document.getElementById('app-container').style.visibility = 'visible';
                     return;
                 }
                 
@@ -517,6 +522,10 @@
         // ---------------------------
         
         async function handleSearch(query) {
+            if (!apiKey && typeof __firebase_config === 'undefined') { // Check for API key only in deployed environment
+                showToast("Google AI API 키가 없습니다. 코드에 키를 입력하고 다시 배포해주세요.", "error");
+                return;
+            }
             if (!auth || !auth.currentUser) {
                 showToast("Firebase에 연결되지 않았습니다. 구성 정보를 확인해주세요.", "error");
                 return;
