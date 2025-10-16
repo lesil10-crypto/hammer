@@ -361,7 +361,6 @@
         const apiKey = ""; 
         const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent`;
         const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict`;
-        const ttsApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent`;
         
         const translationCache = {};
 
@@ -402,7 +401,6 @@
                     console.log("Authenticated Anonymously. User ID:", userId);
                 }
 
-                // Once signed in, show the app and load data
                 document.getElementById('app-container').style.visibility = 'visible';
                 loadUserLists();
                 listenForFiles();
@@ -697,11 +695,11 @@
                         <div class="w-full md:w-3/5">
                             <div class="flex items-center gap-4 mb-4">
                                 <h2 class="text-5xl font-bold">${data.word}</h2>
-                                <button onclick="geminiSpeak('${data.word}', 'en-US')" class="btn-3d p-3"><i data-lucide="volume-2"></i></button>
+                                <button onclick="speak('${data.word}', 'en-US')" class="btn-3d p-3"><i data-lucide="volume-2"></i></button>
                             </div>
                             <div class="flex items-center gap-2">
                                 <p class="text-2xl text-gray-600">${data.koreanMeaning}</p>
-                                <button onclick="geminiSpeak('${data.koreanMeaning}', 'ko-KR')" class="btn-3d p-3"><i data-lucide="volume-2"></i></button>
+                                <button onclick="speak('${data.koreanMeaning}', 'ko-KR')" class="btn-3d p-3"><i data-lucide="volume-2"></i></button>
                             </div>
                             <p class="text-lg text-gray-500 mt-2">[${data.pronunciation}]</p>
                         </div>
@@ -723,11 +721,11 @@
                         <p class="text-md leading-relaxed text-gray-600">${episode.story_ko}</p>
                     </div>
                     <div class="mt-4 flex flex-col sm:flex-row gap-2">
-                        <button class="icon-btn" onclick="geminiSpeak('${episode.story.replace(/'/g, "\\'")}', 'en-US')">
+                        <button class="icon-btn" onclick="speak('${episode.story.replace(/'/g, "\\'")}', 'en-US')">
                             <i data-lucide="volume-2" class="w-5 h-5"></i>
                             <span class="tooltip">영어 듣기</span>
                         </button>
-                        <button class="icon-btn" onclick="geminiSpeak('${episode.story_ko.replace(/'/g, "\\'")}', 'ko-KR')">
+                        <button class="icon-btn" onclick="speak('${episode.story_ko.replace(/'/g, "\\'")}', 'ko-KR')">
                             <i data-lucide="volume-2" class="w-5 h-5"></i>
                             <span class="tooltip">한국어 듣기</span>
                         </button>
@@ -821,8 +819,8 @@
                             </div>
                         </div>
                         <div class="flex items-center flex-shrink-0 gap-1">
-                            <button class="icon-btn" onclick="geminiSpeak('${ex.en.replace(/'/g, "\\'")}', 'en-US')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">영어 듣기</span></button>
-                            <button class="icon-btn" onclick="geminiSpeak('${ex.ko.replace(/'/g, "\\'")}', 'ko-KR')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">한국어 듣기</span></button>
+                            <button class="icon-btn" onclick="speak('${ex.en.replace(/'/g, "\\'")}', 'en-US')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">영어 듣기</span></button>
+                            <button class="icon-btn" onclick="speak('${ex.ko.replace(/'/g, "\\'")}', 'ko-KR')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">한국어 듣기</span></button>
                             <button class="icon-btn" onclick="saveSentence('${ex.en.replace(/'/g, "\\'")}', '${ex.ko.replace(/'/g, "\\'")}')"><i data-lucide="save" class="w-5 h-5"></i><span class="tooltip">저장하기</span></button>
                         </div>
                     </li>`).join('');
@@ -838,8 +836,8 @@
                             <p class="text-md text-gray-600">${meaning.exampleSentenceTranslation}</p>
                         </div>
                         <div class="flex items-center gap-2 mt-2">
-                            <button class="icon-btn" onclick="geminiSpeak('${meaning.exampleSentence.replace(/'/g, "\\'")}', 'en-US')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">영어 듣기</span></button>
-                            <button class="icon-btn" onclick="geminiSpeak('${meaning.exampleSentenceTranslation.replace(/'/g, "\\'")}', 'ko-KR')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">한국어 듣기</span></button>
+                            <button class="icon-btn" onclick="speak('${meaning.exampleSentence.replace(/'/g, "\\'")}', 'en-US')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">영어 듣기</span></button>
+                            <button class="icon-btn" onclick="speak('${meaning.exampleSentenceTranslation.replace(/'/g, "\\'")}', 'ko-KR')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">한국어 듣기</span></button>
                             <button class="icon-btn" onclick="saveSentence('${meaning.exampleSentence.replace(/'/g, "\\'")}', '${meaning.exampleSentenceTranslation.replace(/'/g, "\\'")}')"><i data-lucide="save" class="w-5 h-5"></i><span class="tooltip">저장하기</span></button>
                         </div>
                     </div>
@@ -878,11 +876,11 @@
                                 <p class="font-semibold text-lg">${addClickToSearch(q.quote)}</p>
                                 <p class="text-gray-600">${q.translation}</p>
                                 <div class="mt-2 flex gap-2">
-                                    <button class="icon-btn" onclick="geminiSpeak('${q.quote.replace(/'/g, "\\'")}', 'en-US')">
+                                    <button class="icon-btn" onclick="speak('${q.quote.replace(/'/g, "\\'")}', 'en-US')">
                                         <i data-lucide="volume-2" class="w-5 h-5"></i>
                                         <span class="tooltip">영어 듣기</span>
                                     </button>
-                                    <button class="icon-btn" onclick="geminiSpeak('${q.translation.replace(/'/g, "\\'")}', 'ko-KR')">
+                                    <button class="icon-btn" onclick="speak('${q.translation.replace(/'/g, "\\'")}', 'ko-KR')">
                                         <i data-lucide="volume-2" class="w-5 h-5"></i>
                                         <span class="tooltip">한국어 듣기</span>
                                     </button>
@@ -913,11 +911,11 @@
                                                 <p class="text-sm text-gray-500 pl-4">${d.translation}</p>
                                             </div>
                                             <div class="flex items-center flex-shrink-0 gap-1 mt-1">
-                                                <button class="icon-btn" onclick="geminiSpeak('${d.line.replace(/'/g, "\\'")}', 'en-US')">
+                                                <button class="icon-btn" onclick="speak('${d.line.replace(/'/g, "\\'")}', 'en-US')">
                                                     <i data-lucide="volume-2" class="w-5 h-5"></i>
                                                     <span class="tooltip">영어 듣기</span>
                                                 </button>
-                                                <button class="icon-btn" onclick="geminiSpeak('${d.translation.replace(/'/g, "\\'")}', 'ko-KR')">
+                                                <button class="icon-btn" onclick="speak('${d.translation.replace(/'/g, "\\'")}', 'ko-KR')">
                                                     <i data-lucide="volume-2" class="w-5 h-5"></i>
                                                     <span class="tooltip">한국어 듣기</span>
                                                 </button>
@@ -1013,113 +1011,7 @@
             return text.replace(/\b[a-zA-Z]{2,}\b/g, (match) => `<span class="clickable-word">${match}</span>`);
         }
 
-        // --- New TTS functionality ---
-        let audioContext = null;
-        let currentAudioSource = null;
-
-        function base64ToArrayBuffer(base64) {
-            const binaryString = window.atob(base64);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            return bytes.buffer;
-        }
-
-        function pcmToWav(pcmData, sampleRate) {
-            const numChannels = 1;
-            const bitsPerSample = 16;
-            const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-            const blockAlign = numChannels * (bitsPerSample / 8);
-            const dataSize = pcmData.length * pcmData.BYTES_PER_ELEMENT;
-            const buffer = new ArrayBuffer(44 + dataSize);
-            const view = new DataView(buffer);
-
-            const writeString = (view, offset, string) => {
-                for (let i = 0; i < string.length; i++) {
-                    view.setUint8(offset + i, string.charCodeAt(i));
-                }
-            };
-
-            writeString(view, 0, 'RIFF');
-            view.setUint32(4, 36 + dataSize, true);
-            writeString(view, 8, 'WAVE');
-            writeString(view, 12, 'fmt ');
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true);
-            view.setUint16(22, numChannels, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, byteRate, true);
-            view.setUint16(32, blockAlign, true);
-            view.setUint16(34, bitsPerSample, true);
-            writeString(view, 36, 'data');
-            view.setUint32(40, dataSize, true);
-
-            new Int16Array(buffer, 44).set(pcmData);
-
-            return new Blob([view], { type: 'audio/wav' });
-        }
-        
-        window.geminiSpeak = async function(text, lang = 'en-US') {
-            if (!text || !event) return;
-
-            const targetElement = event.target.closest('button');
-            let originalContent = null;
-            if (targetElement) {
-                originalContent = targetElement.innerHTML;
-                targetElement.innerHTML = `<div class="loader !w-4 !h-4 border-2 border-t-blue-500 inline-block animate-spin"></div>`;
-                targetElement.disabled = true;
-            }
-
-            try {
-                const payload = {
-                    contents: [{ parts: [{ text: `Say it clearly in ${lang}: ${text}` }] }],
-                    generationConfig: { responseModalities: ["AUDIO"] },
-                    model: "gemini-2.5-flash-preview-tts"
-                };
-
-                const result = await fetchWithRetry(ttsApiUrl, payload);
-                const part = result?.candidates?.[0]?.content?.parts?.[0];
-                const audioData = part?.inlineData?.data;
-                const mimeType = part?.inlineData?.mimeType;
-
-                if (audioData && mimeType?.startsWith("audio/")) {
-                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
-                    if (!sampleRateMatch) throw new Error("Sample rate not found in mime type");
-                    
-                    const sampleRate = parseInt(sampleRateMatch[1], 10);
-                    const pcmData = base64ToArrayBuffer(audioData);
-                    const pcm16 = new Int16Array(pcmData);
-                    const wavBlob = pcmToWav(pcm16, sampleRate);
-
-                    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    if (currentAudioSource) currentAudioSource.stop();
-
-                    const audioBuffer = await audioContext.decodeAudioData(await wavBlob.arrayBuffer());
-                    const source = audioContext.createBufferSource();
-                    source.buffer = audioBuffer;
-                    source.connect(audioContext.destination);
-                    source.start(0);
-                    currentAudioSource = source;
-                    source.onended = () => { if (currentAudioSource === source) currentAudioSource = null; };
-                } else {
-                    throw new Error("Invalid audio data in response.");
-                }
-            } catch (error) {
-                console.error("Gemini TTS Error:", error);
-                showToast("음성 생성에 실패했습니다. 브라우저 기본 음성을 사용합니다.", "warning");
-                legacySpeak(text, lang);
-            } finally {
-                if (targetElement && originalContent) {
-                    targetElement.innerHTML = originalContent;
-                    targetElement.disabled = false;
-                    safeCreateIcons();
-                }
-            }
-        }
-
-        function legacySpeak(text, lang = 'en-US') {
+        window.speak = function(text, lang = 'en-US') {
             if (!('speechSynthesis' in window)) {
                 showToast("현재 브라우저에서는 음성 출력을 지원하지 않습니다.", "warning");
                 return;
@@ -1130,7 +1022,6 @@
             utterance.lang = lang;
             speechSynthesis.speak(utterance);
         }
-        // --- End of TTS ---
 
         function showToast(message, type = "info") {
             const toast = document.getElementById('toast-container');
@@ -1405,7 +1296,7 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-1 flex-shrink-0">
-                            <button class="icon-btn" onclick="geminiSpeak('${item.en.replace(/'/g, "\\'")}', 'en-US')"><i data-lucide="volume-2"></i><span class="tooltip">영어 듣기</span></button>
+                            <button class="icon-btn" onclick="speak('${item.en.replace(/'/g, "\\'")}', 'en-US')"><i data-lucide="volume-2"></i><span class="tooltip">영어 듣기</span></button>
                            <button onclick="toggleReadStatus('${item.id}', 'sentences')" class="icon-btn"><i data-lucide="${item.read ? 'eye-off' : 'eye'}"></i><span class="tooltip">${item.read ? '읽지 않음으로' : '읽음으로'}</span></button>
                            <button onclick="deleteListItem('${item.id}', 'sentences')" class="icon-btn text-red-500 hover:bg-red-100"><i data-lucide="trash-2"></i><span class="tooltip">삭제</span></button>
                         </div>
@@ -1606,8 +1497,9 @@
                 showToast("파일 크기는 50MB를 초과할 수 없습니다.", "error");
                 return;
             }
-
-            const storageRef = ref(storage, `artifacts/${appId}/public/files/${file.name}`);
+            
+            // **FIXED**: Reverted to user-specific private path for storage
+            const storageRef = ref(storage, `artifacts/${appId}/users/${userId}/${file.name}`);
             const uploadTask = uploadBytesResumable(storageRef, file);
             const uploadProgressContainer = document.getElementById('upload-progress-container');
             const uploadProgressBar = document.getElementById('upload-progress-bar');
@@ -1626,7 +1518,7 @@
                 async () => {
                     try {
                         const metadata = uploadTask.snapshot.metadata;
-                        await addDoc(collection(db, `artifacts/${appId}/public/data/file_metadata`), {
+                        await addDoc(collection(db, `artifacts/${appId}/users/${userId}/file_metadata`), {
                             name: metadata.name,
                             fullPath: metadata.fullPath,
                             size: metadata.size,
@@ -1647,7 +1539,7 @@
 
         function listenForFiles() {
             if (!db || !userId) return;
-            const filesQuery = collection(db, `artifacts/${appId}/public/data/file_metadata`);
+            const filesQuery = collection(db, `artifacts/${appId}/users/${userId}/file_metadata`);
             onSnapshot(filesQuery, (snapshot) => {
                 const files = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderFileList(files);
@@ -1670,17 +1562,12 @@
             files.forEach(fileData => {
                 const fileElement = document.createElement('div');
                 fileElement.className = 'flex items-center justify-between p-2 rounded-lg hover:bg-slate-200';
-                
-                const isImage = fileData.contentType && fileData.contentType.startsWith('image/');
-                const storyButtonHtml = isImage ? `<button class="icon-btn" title="이미지로 이야기 만들기" onclick="generateStoryFromImage('${fileData.id}', '${fileData.fullPath}', '${fileData.name.replace(/'/g, "\\'")}')"><i data-lucide="sparkles"></i></button>` : '';
-
                 fileElement.innerHTML = `
                     <div class="truncate">
                         <p class="font-semibold truncate">${fileData.name}</p>
                         <p class="text-sm text-gray-500">${(fileData.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
                     <div class="flex items-center gap-1 flex-shrink-0">
-                        ${storyButtonHtml}
                         <button class="icon-btn" onclick="downloadFile('${fileData.fullPath}')"><i data-lucide="download"></i></button>
                         <button class="icon-btn text-red-500" onclick="deleteFile('${fileData.id}', '${fileData.fullPath}')"><i data-lucide="trash-2"></i></button>
                     </div>
@@ -1707,7 +1594,7 @@
         window.deleteFile = function(docId, fullPath) {
             showConfirmationModal("정말로 이 파일을 삭제하시겠습니까?", async () => {
                 const fileRef = ref(storage, fullPath);
-                const docRef = doc(db, `artifacts/${appId}/public/data/file_metadata/${docId}`);
+                const docRef = doc(db, `artifacts/${appId}/users/${userId}/file_metadata/${docId}`);
                 try {
                     await deleteObject(fileRef);
                     await deleteDoc(docRef);
@@ -1735,7 +1622,7 @@
 
         window.expandStory = async function(button, word, story, story_ko) {
             button.disabled = true;
-            button.innerHTML = `<div class="loader !w-5 !h-5 border-2 border-t-blue-500 inline-block animate-spin"></div>`;
+            button.innerHTML = `<div class="loader w-5 h-5 border-2 border-t-blue-500 inline-block animate-spin"></div>`;
             try {
                 const prompt = `You are a creative storyteller. Expand the following short, humorous story about the word "${word}" into a more detailed and engaging narrative of 3-4 paragraphs. Keep the funny and lighthearted tone.\n\nOriginal Story (English): "${story}"\nOriginal Story (Korean): "${story_ko}"\n\nPlease provide the expanded story in both English and Korean. Format your response as a JSON object with "expanded_story_en" and "expanded_story_ko" keys.`;
                 const result = await callGemini(prompt, true);
@@ -1781,8 +1668,8 @@
                             </div>
                         </div>
                         <div class="flex items-center flex-shrink-0 gap-1">
-                            <button class="icon-btn" onclick="geminiSpeak('${s.en.replace(/'/g, "\\'")}', 'en-US')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">영어 듣기</span></button>
-                            <button class="icon-btn" onclick="geminiSpeak('${s.ko.replace(/'/g, "\\'")}', 'ko-KR')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">한국어 듣기</span></button>
+                            <button class="icon-btn" onclick="speak('${s.en.replace(/'/g, "\\'")}', 'en-US')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">영어 듣기</span></button>
+                            <button class="icon-btn" onclick="speak('${s.ko.replace(/'/g, "\\'")}', 'ko-KR')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">한국어 듣기</span></button>
                             <button class="icon-btn" onclick="saveSentence('${s.en.replace(/'/g, "\\'")}', '${s.ko.replace(/'/g, "\\'")}')"><i data-lucide="save" class="w-5 h-5"></i><span class="tooltip">저장하기</span></button>
                         </div>
                     </li>
@@ -1799,97 +1686,6 @@
             }
         }
         
-        async function imageUrlToBase64(url) {
-            const response = await fetch(url);
-            const blob = await response.blob();
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-            });
-        }
-
-        window.generateStoryFromImage = async function(docId, fullPath, fileName) {
-            modalContainer.classList.add('flex');
-            modalContent.innerHTML = `
-                <div class="flex justify-between items-center mb-4">
-                     <h3 class="text-2xl font-bold">✨ 이미지로 이야기 만들기</h3>
-                     <button onclick="hideModal()" class="text-gray-500 hover:text-gray-800"><i data-lucide="x"></i></button>
-                </div>
-                <div class="text-center">
-                    <div class="loader mx-auto"></div>
-                    <p class="mt-4">"${fileName}" 이미지를 분석하고 있습니다...</p>
-                </div>
-            `;
-            safeCreateIcons();
-
-            try {
-                const downloadUrl = await getDownloadURL(ref(storage, fullPath));
-                const base64ImageData = await imageUrlToBase64(downloadUrl);
-                const mimeType = "image/jpeg";
-
-                const prompt = `Analyze the uploaded image. Identify 5 key English vocabulary words from the image. Then, write a short, creative story in English (about 100 words) that uses all these words. The words must be bolded in the story using markdown (**word**). Finally, provide a natural Korean translation for the story. Return your response ONLY as a JSON object with this exact structure: {"vocabulary": ["word1", "word2", ...], "story_en": "English story with **bolded** words.", "story_ko": "Korean translation."}`;
-                
-                const payload = {
-                    contents: [{
-                        parts: [
-                            { text: prompt },
-                            { inlineData: { mimeType, data: base64ImageData } }
-                        ]
-                    }],
-                     generationConfig: { responseMimeType: "application/json" },
-                };
-
-                const result = await fetchWithRetry(textApiUrl, payload);
-                const resultText = result.candidates[0].content.parts[0].text;
-                let storyData = JSON.parse(resultText);
-                
-                const vocabHtml = storyData.vocabulary.map(v => `<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full clickable-word">${v}</span>`).join('');
-                const storyHtml = addClickToSearch(storyData.story_en.replace(/\*\*(.*?)\*\*/g, '<strong class="text-blue-700">$1</strong>'));
-
-                modalContent.innerHTML = `
-                    <div class="flex justify-between items-center mb-4">
-                         <h3 class="text-2xl font-bold">✨ "${fileName}" 이야기</h3>
-                         <button onclick="hideModal()" class="text-gray-500 hover:text-gray-800"><i data-lucide="x"></i></button>
-                    </div>
-                    <div class="space-y-4">
-                        <div>
-                            <h4 class="font-semibold">핵심 단어:</h4>
-                            <div class="flex flex-wrap gap-2 mt-2">${vocabHtml}</div>
-                        </div>
-                        <div class="border-t pt-4">
-                             <p class="text-lg leading-relaxed">${storyHtml}</p>
-                             <p class="text-md leading-relaxed text-gray-600 mt-2">${storyData.story_ko}</p>
-                        </div>
-                         <div class="mt-4 flex gap-2">
-                            <button class="icon-btn" onclick="geminiSpeak('${storyData.story_en.replace(/'/g, "\\'")}', 'en-US')">
-                                <i data-lucide="volume-2" class="w-5 h-5"></i>
-                                <span class="tooltip">영어 듣기</span>
-                            </button>
-                            <button class="icon-btn" onclick="geminiSpeak('${storyData.story_ko.replace(/'/g, "\\'")}', 'ko-KR')">
-                                <i data-lucide="volume-2" class="w-5 h-5"></i>
-                                <span class="tooltip">한국어 듣기</span>
-                            </button>
-                        </div>
-                    </div>
-                `;
-                safeCreateIcons();
-
-            } catch (error) {
-                 console.error("Image story generation failed:", error);
-                 modalContent.innerHTML = `
-                    <div class="flex justify-between items-center mb-4">
-                         <h3 class="text-2xl font-bold text-red-500">오류</h3>
-                         <button onclick="hideModal()" class="text-gray-500 hover:text-gray-800"><i data-lucide="x"></i></button>
-                    </div>
-                    <p>이미지 분석 중 오류가 발생했습니다. 브라우저 보안 정책(CORS)으로 인해 이미지를 불러오지 못했을 수 있습니다.</p>
-                 `;
-                 safeCreateIcons();
-            }
-        }
-
-
         // ---------------------------
         // 11. Initializers and Event Listeners
         // ---------------------------
