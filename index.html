@@ -775,17 +775,17 @@
                     }
                 }`;
                 const encyclopediaFullData = await callGemini(encyclopediaPrompt, true);
-                if (searchId === currentTab.searchId) {
-                    currentTab.fullSearchResult.encyclopediaData = encyclopediaFullData;
-                    appendEncyclopediaButton(buttonContainer, encyclopediaFullData.encyclopedia);
-                    showToast("모든 콘텐츠 생성이 완료되었습니다!", "success");
+                if (searchId !== currentTab.searchId) return;
+                
+                currentTab.fullSearchResult.encyclopediaData = encyclopediaFullData;
+                appendEncyclopediaButton(buttonContainer, encyclopediaFullData.encyclopedia);
+                showToast("모든 콘텐츠 생성이 완료되었습니다!", "success");
 
-                    const printButton = currentTab.contentEl.querySelector(`#print-btn-${currentTab.id}`);
-                    if (printButton) {
-                        printButton.disabled = false;
-                        printButton.innerHTML = `<i data-lucide="printer" class="inline-block mr-2"></i>결과 인쇄하기`;
-                        safeCreateIcons();
-                    }
+                const printButton = currentTab.contentEl.querySelector(`#print-btn-${currentTab.id}`);
+                if (printButton) {
+                    printButton.disabled = false;
+                    printButton.innerHTML = `<i data-lucide="printer" class="inline-block mr-2"></i>결과 인쇄하기`;
+                    safeCreateIcons();
                 }
                 
             } catch (error) {
