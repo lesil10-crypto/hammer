@@ -178,20 +178,38 @@
                 background-color: #fff !important;
                 font-family: 'Times New Roman', serif;
             }
-            #app-container > header, .sticky, #tab-bar, footer, .modal, .toast, .tooltip, #auth-container, #confirmation-modal {
+            /* ----------------------------------------------------------- */
+            /* FIX: 인쇄 시 숨겨야 할 모든 비-콘텐츠 요소를 명시적으로 숨김 */
+            /* ----------------------------------------------------------- */
+            #app-container > header, 
+            #search-bar-container,
+            #shortcut-buttons, 
+            #loading-container,
+            #tab-bar, 
+            footer, 
+            .modal, .toast, .tooltip, #auth-container, #confirmation-modal {
                 display: none !important;
             }
+            
             #tab-content-container > div {
+                /* 모든 탭 내용을 숨김 */
                 display: none !important;
             }
             .active-tab-content {
+                /* 현재 인쇄할 탭 내용만 표시 */
                 display: block !important;
+                /* 인쇄 용지에 맞게 너비 재설정 */
+                max-width: 100%;
+                padding: 0;
+                margin: 0;
             }
+            
             #app-container {
                 max-width: 100%;
                 padding: 0;
                 margin: 0;
             }
+
             .card, .btn-3d, .icon-btn {
                 box-shadow: none;
                 border: 1px solid #ccc;
@@ -1575,13 +1593,20 @@
                 return;
             }
             
-            const currentlyActive = document.querySelector('.active-tab-content');
-            if (currentlyActive) {
-                currentlyActive.classList.remove('active-tab-content');
-            }
-            tab.contentEl.classList.add('active-tab-content');
+            // 인쇄할 탭 콘텐츠에만 클래스를 적용하여 보이게 합니다.
+            const allContentDivs = document.querySelectorAll('#tab-content-container > div');
+            allContentDivs.forEach(div => div.classList.remove('active-tab-content')); // 기존 active 클래스 제거
+            tab.contentEl.classList.add('active-tab-content'); 
             
             window.print();
+            
+            // 인쇄 후 클래스를 제거하여 원래 화면 상태로 돌아갑니다.
+            setTimeout(() => {
+                tab.contentEl.classList.remove('active-tab-content');
+                if (activeTabId) {
+                     tabs[activeTabId].contentEl.classList.remove('hidden'); // 현재 활성화된 탭을 다시 표시
+                }
+            }, 100); 
         }
 
         // ---------------------------
