@@ -25,7 +25,6 @@
         }
 
         /* --- Global 3D Text Effect (Neumorphic Texture) --- */
-        /* 화면의 모든 글자에 입체적인 그림자 효과 적용 */
         body, h1, h2, h3, h4, p, span, div, button, a {
             text-shadow: 1px 1px 1px #ffffff, -1px -1px 1px #c5c9d2;
         }
@@ -262,6 +261,7 @@
             <!-- App Shortcut Buttons -->
             <div id="shortcut-buttons" class="card p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <a href="https://www.naver.com" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-green-600 !p-2 !text-sm">
+                    <!-- Naver: 커스텀 SVG로 네오모피즘 스타일 구현 -->
                     <svg class="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect x="2" y="2" width="20" height="20" rx="4" fill="#03C75A"/>
                         <path d="M12 7V17M12 7L10 9M12 7L14 9M10 17H14" stroke="#e0e5ec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -270,14 +270,17 @@
                      Naver
                 </a>
                 <a href="https://www.google.com" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-blue-600 !p-2 !text-sm">
+                    <!-- Google: Lucide Icons 사용 및 색상 조정 -->
                     <i data-lucide="globe-2" class="w-5 h-5 mb-1 text-blue-500" style="text-shadow: 1px 1px 1px #e0e5ec, -1px -1px 1px #c5c9d2;"></i> 
                     Google
                 </a>
                 <a href="https://www.youtube.com" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-red-600 !p-2 !text-sm">
+                    <!-- YouTube: Lucide Icons 사용 및 색상 조정 -->
                     <i data-lucide="youtube" class="w-5 h-5 mb-1 text-red-600" style="text-shadow: 1px 1px 1px #e0e5ec, -1px -1px 1px #c5c9d2;"></i> 
                     YouTube
                 </a>
                 <a href="https://www.clien.net" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-gray-700 !p-2 !text-sm">
+                    <!-- Clien: Lucide Icons 사용 및 색상 조정 -->
                     <i data-lucide="message-square" class="w-5 h-5 mb-1 text-blue-900" style="text-shadow: 1px 1px 1px #e0e5ec, -1px -1px 1px #c5c9d2;"></i> 
                     Clien
                 </a>
@@ -1692,6 +1695,12 @@
                 showToast("Firebase에 연결되지 않았습니다. 구성 정보를 확인해주세요.", "error");
                 return;
             }
+            // --- NEW: Add detailed auth logging for debugging ---
+            console.log("Attempting file upload. Current user object:", auth.currentUser);
+            console.log("User ID being used for path:", userId);
+            console.log("App ID being used for path:", appId);
+            // --- END NEW ---
+
             const file = fileUploadInput.files[0];
             if (!file) {
                 showToast("파일을 선택해주세요.", "warning");
@@ -1703,26 +1712,37 @@
                 return;
             }
             
-            // Storage 경로를 userId를 사용하여 수정했습니다.
+            // Firebase Storage 경로: artifacts/{appId}/users/{userId}/files/{file.name}
             const storageRef = ref(storage, `artifacts/${appId}/users/${userId}/files/${file.name}`);
             const uploadTask = uploadBytesResumable(storageRef, file);
             const uploadProgressContainer = document.getElementById('upload-progress-container');
             const uploadProgressBar = document.getElementById('upload-progress-bar');
+            
+            // 업로드 시작 UI
             uploadProgressContainer.classList.remove('hidden');
+            fileUploadButton.disabled = true;
 
             uploadTask.on('state_changed', 
                 (snapshot) => {
                     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                     uploadProgressBar.style.width = progress + '%';
                 }, 
+                // --- FIX: 에러 핸들링 강화 ---
                 (error) => {
-                    console.error("Upload failed:", error);
-                    showToast("파일 업로드에 실패했습니다.", "error");
+                    console.error("Upload failed. Firebase Error Code:", error.code);
+                    console.error("Full Error:", error);
+                    showToast(`파일 업로드에 실패했습니다. (${error.code})`, "error");
+                    
+                    // UI 초기화
                     uploadProgressContainer.classList.add('hidden');
+                    uploadProgressBar.style.width = '0%';
+                    fileUploadButton.disabled = false;
                 }, 
+                // --- 업로드 성공 시 ---
                 async () => {
                     try {
                         const metadata = uploadTask.snapshot.metadata;
+                        // Firestore 경로: artifacts/{appId}/users/{userId}/file_metadata/{docId}
                         await addDoc(collection(db, `artifacts/${appId}/users/${userId}/file_metadata`), {
                             name: metadata.name,
                             fullPath: metadata.fullPath,
@@ -1730,13 +1750,21 @@
                             contentType: metadata.contentType,
                             timestamp: new Date()
                         });
-                        uploadProgressContainer.classList.add('hidden');
+                        
                         showToast("파일이 성공적으로 업로드되었습니다.", "success");
-                        fileUploadInput.value = '';
+                        
                     } catch (error) {
-                        console.error("Error saving file metadata:", error);
-                        showToast("파일 정보 저장에 실패했습니다.", "error");
+                        console.error("Error saving file metadata to Firestore:", error);
+                        showToast("파일 정보 저장에 실패했습니다. (DB 오류)", "error");
+                        // 메타데이터 저장이 실패하면 Storage의 파일도 삭제 시도 (클린업)
                         await deleteObject(uploadTask.snapshot.ref).catch(err => console.error("Orphaned file cleanup failed:", err));
+                        
+                    } finally {
+                        // UI 초기화
+                        uploadProgressContainer.classList.add('hidden');
+                        uploadProgressBar.style.width = '0%';
+                        fileUploadInput.value = '';
+                        fileUploadButton.disabled = false;
                     }
                 }
             );
@@ -1998,3 +2026,4 @@
     </script>
 </body>
 </html>
+
