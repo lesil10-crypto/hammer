@@ -195,10 +195,9 @@
                 /* 모든 탭 내용을 숨김 */
                 display: none !important;
             }
-            .active-tab-content {
-                /* 현재 인쇄할 탭 내용만 표시 */
+            /* **가장 중요한 FIX: active-tab-content와 print-only 영역만 보이게 함** */
+            .active-tab-content, #print-only-modal-content {
                 display: block !important;
-                /* 인쇄 용지에 맞게 너비 재설정 */
                 max-width: 100%;
                 padding: 0;
                 margin: 0;
@@ -286,6 +285,9 @@
             
             <!-- Content Area -->
             <main id="tab-content-container"></main>
+
+            <!-- FIX: Hidden container to hold modal content during printing -->
+            <div id="print-only-modal-content" class="hidden"></div>
         </div>
 
         <!-- Fixed Bottom Menu -->
@@ -431,6 +433,7 @@
         const loadingText = document.getElementById('loading-text');
         const progressBar = document.getElementById('progress-bar');
         const searchBarContainer = document.getElementById('search-bar-container'); // 스크롤용
+        const printOnlyModalContent = document.getElementById('print-only-modal-content'); // 인쇄 전용 컨테이너
 
         const apiKey = USER_GEMINI_API_KEY; 
         const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent`;
@@ -1205,6 +1208,18 @@
             `;
         }
         
+        function getEncyclopediaHtml(data) {
+             return `
+                <div class="print-section">
+                    <h3 class="text-2xl font-bold mb-4">백과사전식 심화 설명</h3>
+                    ${renderEncyclopediaSection('서론 (Introduction)', data.introduction, data.introduction_ko)}
+                    ${renderEncyclopediaSection('어원 (Etymology)', data.etymology, data.etymology_ko)}
+                    ${renderEncyclopediaSection('역사적 배경 (Historical Background)', data.history, data.history_ko)}
+                    ${renderEncyclopediaSection('문학/현대에서의 사용 (Usage)', data.usage, data.usage_ko)}
+                </div>
+            `;
+        }
+
         function showEncyclopedia(data) {
             modalContent.innerHTML = `
                 <div class="flex justify-between items-center mb-4">
@@ -1224,6 +1239,23 @@
             safeCreateIcons();
         }
         
+        function getConceptTreeHtml(data) {
+            const createList = (title, items) => {
+                if (!items || items.length === 0) return '';
+                // 인쇄용 스타일 (배경색 및 클릭 효과 제거)
+                const itemsHtml = items.map(item => `<span class="bg-gray-100 text-gray-800 px-3 py-1 rounded-full">${item}</span>`).join('');
+                return `<div><h4 class="font-semibold text-lg mt-4">${title}</h4><div class="flex flex-wrap gap-2 mt-2">${itemsHtml}</div></div>`
+            };
+            return `
+                <div class="print-section mt-8">
+                    <h3 class="text-2xl font-bold mb-4">개념 트리</h3>
+                    ${createList('상위 개념', data.superordinate)}
+                    ${createList('동위 개념', data.coordinate)}
+                    ${createList('하위 개념', data.subordinate)}
+                </div>
+            `;
+        }
+
         function showConceptTree(data) {
             const createList = (title, items) => {
                 if (!items || items.length === 0) return '';
@@ -1588,23 +1620,31 @@
 
         function handlePrint(tabId) {
             const tab = tabs[tabId];
-            if (!tab || !tab.fullSearchResult || !tab.fullSearchResult.encyclopediaData) {
-                showToast("인쇄 데이터가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.", "warning");
+            if (!tab || !tab.fullSearchResult || !tab.fullSearchResult.encyclopediaData || !tab.fullSearchResult.fastDeepDiveData) {
+                showToast("인쇄 데이터가 아직 준비되지 않았습니다. 모든 정보가 로딩될 때까지 기다려주세요.", "warning");
                 return;
             }
             
-            // 인쇄할 탭 콘텐츠에만 클래스를 적용하여 보이게 합니다.
+            // 1. 인쇄할 탭 콘텐츠에만 클래스를 적용하여 보이게 합니다.
             const allContentDivs = document.querySelectorAll('#tab-content-container > div');
-            allContentDivs.forEach(div => div.classList.remove('active-tab-content')); // 기존 active 클래스 제거
+            allContentDivs.forEach(div => div.classList.remove('active-tab-content')); 
             tab.contentEl.classList.add('active-tab-content'); 
+
+            // 2. 모달 콘텐츠(백과사전, 개념 트리)를 인쇄 영역에 동적으로 삽입
+            const encyclopediaHtml = getEncyclopediaHtml(tab.fullSearchResult.encyclopediaData.encyclopedia);
+            const conceptTreeHtml = getConceptTreeHtml(tab.fullSearchResult.fastDeepDiveData.conceptTree);
             
+            printOnlyModalContent.innerHTML = encyclopediaHtml + conceptTreeHtml;
+            
+            // 3. 인쇄 실행
             window.print();
             
-            // 인쇄 후 클래스를 제거하여 원래 화면 상태로 돌아갑니다.
+            // 4. 인쇄 후 클래스 제거 및 동적 콘텐츠 비우기
             setTimeout(() => {
                 tab.contentEl.classList.remove('active-tab-content');
+                printOnlyModalContent.innerHTML = ''; // 인쇄 후 내용 제거
                 if (activeTabId) {
-                     tabs[activeTabId].contentEl.classList.remove('hidden'); // 현재 활성화된 탭을 다시 표시
+                     tabs[activeTabId].contentEl.classList.remove('hidden'); 
                 }
             }, 100); 
         }
