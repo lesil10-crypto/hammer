@@ -191,11 +191,16 @@
                 display: none !important;
             }
             
+            /* FIX: 메인 콘텐츠의 부모인 #tab-content-container는 보존 */
+            #tab-content-container {
+                display: block !important;
+            }
+            
             #tab-content-container > div {
-                /* 모든 탭 내용을 숨김 */
+                /* 기본적으로 모든 탭 내용을 숨기지만, active-tab-content와 print-only 영역은 보이게 함 */
                 display: none !important;
             }
-            /* **가장 중요한 FIX: active-tab-content와 print-only 영역만 보이게 함** */
+            
             .active-tab-content, #print-only-modal-content {
                 display: block !important;
                 max-width: 100%;
@@ -1640,8 +1645,10 @@
             // 1. 인쇄할 탭 콘텐츠에만 클래스를 적용하여 보이게 합니다. (FIX: 메인 콘텐츠 표시)
             const allContentDivs = document.querySelectorAll('#tab-content-container > div');
             allContentDivs.forEach(div => div.classList.remove('active-tab-content')); 
+            
+            // 현재 탭의 콘텐츠를 '보이는' 상태로 만듭니다.
             tab.contentEl.classList.add('active-tab-content'); 
-            tab.contentEl.classList.remove('hidden'); // 메인 콘텐츠가 hidden 상태이지 않도록 보장
+            tab.contentEl.classList.remove('hidden'); // hidden 클래스 제거
 
             // 2. 모달 콘텐츠(백과사전, 개념 트리)를 인쇄 영역에 동적으로 삽입
             const encyclopediaHtml = getEncyclopediaHtml(tab.fullSearchResult.encyclopediaData.encyclopedia);
@@ -1652,18 +1659,18 @@
             // 3. 인쇄 실행
             window.print();
             
-            // 4. 인쇄 후 클래스 제거 및 동적 콘텐츠 비우기
+            // 4. 인쇄 후 클래스 제거 및 동적 콘텐츠 비우기 (클린업)
             setTimeout(() => {
-                // 인쇄 후, print-only 콘텐츠를 제거하고 메인 탭 콘텐츠를 다시 숨깁니다.
                 printOnlyModalContent.innerHTML = ''; 
-                if (activeTabId) {
-                    // 현재 활성화된 탭을 다시 표시합니다 (switchTab 로직을 따름)
-                    tab.contentEl.classList.remove('active-tab-content');
-                    for (const id in tabs) {
-                         if (id !== activeTabId) {
-                             tabs[id].contentEl.classList.add('hidden');
-                         }
-                    }
+                tab.contentEl.classList.remove('active-tab-content');
+                
+                // 원래의 탭 상태로 복구 (현재 활성 탭만 보이게)
+                for (const id in tabs) {
+                     if (id === activeTabId) {
+                         tabs[id].contentEl.classList.remove('hidden');
+                     } else {
+                         tabs[id].contentEl.classList.add('hidden');
+                     }
                 }
             }, 100); 
         }
