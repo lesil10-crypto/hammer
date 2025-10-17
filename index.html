@@ -252,19 +252,31 @@
                 </div>
             </div>
 
-            <!-- App Shortcut Buttons -->
+            <!-- App Shortcut Buttons - ADDED ICONS -->
             <div id="shortcut-buttons" class="card p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <a href="https://www.naver.com" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-green-600 !p-2 !text-sm">
-                    <img src="https://placehold.co/20x20/03C75A/FFFFFF?text=N" alt="Naver Icon" class="w-5 h-5 mb-1" style="box-shadow: none;"> Naver
+                    <!-- Naver: 커스텀 SVG로 네오모피즘 스타일 구현 -->
+                    <svg class="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="2" y="2" width="20" height="20" rx="4" fill="#03C75A"/>
+                        <path d="M12 7V17M12 7L10 9M12 7L14 9M10 17H14" stroke="#e0e5ec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="12" cy="12" r="11" fill="none" stroke="#03C75A" stroke-width="2"/>
+                    </svg>
+                     Naver
                 </a>
                 <a href="https://www.google.com" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-blue-600 !p-2 !text-sm">
-                    <i data-lucide="search-check" class="w-5 h-5 mb-1 text-red-500"></i> Google
+                    <!-- Google: Lucide Icons 사용 및 색상 조정 -->
+                    <i data-lucide="globe-2" class="w-5 h-5 mb-1 text-blue-500" style="text-shadow: 1px 1px 1px #e0e5ec, -1px -1px 1px #c5c9d2;"></i> 
+                    Google
                 </a>
                 <a href="https://www.youtube.com" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-red-600 !p-2 !text-sm">
-                    <i data-lucide="youtube" class="w-5 h-5 mb-1 text-red-700"></i> YouTube
+                    <!-- YouTube: Lucide Icons 사용 및 색상 조정 -->
+                    <i data-lucide="youtube" class="w-5 h-5 mb-1 text-red-600" style="text-shadow: 1px 1px 1px #e0e5ec, -1px -1px 1px #c5c9d2;"></i> 
+                    YouTube
                 </a>
                 <a href="https://www.clien.net" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-gray-700 !p-2 !text-sm">
-                    <i data-lucide="message-square" class="w-5 h-5 mb-1 text-blue-900"></i> Clien
+                    <!-- Clien: Lucide Icons 사용 및 색상 조정 -->
+                    <i data-lucide="message-square" class="w-5 h-5 mb-1 text-blue-900" style="text-shadow: 1px 1px 1px #e0e5ec, -1px -1px 1px #c5c9d2;"></i> 
+                    Clien
                 </a>
             </div> 
             <!-- END NEW -->
@@ -1625,10 +1637,11 @@
                 return;
             }
             
-            // 1. 인쇄할 탭 콘텐츠에만 클래스를 적용하여 보이게 합니다.
+            // 1. 인쇄할 탭 콘텐츠에만 클래스를 적용하여 보이게 합니다. (FIX: 메인 콘텐츠 표시)
             const allContentDivs = document.querySelectorAll('#tab-content-container > div');
             allContentDivs.forEach(div => div.classList.remove('active-tab-content')); 
             tab.contentEl.classList.add('active-tab-content'); 
+            tab.contentEl.classList.remove('hidden'); // 메인 콘텐츠가 hidden 상태이지 않도록 보장
 
             // 2. 모달 콘텐츠(백과사전, 개념 트리)를 인쇄 영역에 동적으로 삽입
             const encyclopediaHtml = getEncyclopediaHtml(tab.fullSearchResult.encyclopediaData.encyclopedia);
@@ -1641,10 +1654,16 @@
             
             // 4. 인쇄 후 클래스 제거 및 동적 콘텐츠 비우기
             setTimeout(() => {
-                tab.contentEl.classList.remove('active-tab-content');
-                printOnlyModalContent.innerHTML = ''; // 인쇄 후 내용 제거
+                // 인쇄 후, print-only 콘텐츠를 제거하고 메인 탭 콘텐츠를 다시 숨깁니다.
+                printOnlyModalContent.innerHTML = ''; 
                 if (activeTabId) {
-                     tabs[activeTabId].contentEl.classList.remove('hidden'); 
+                    // 현재 활성화된 탭을 다시 표시합니다 (switchTab 로직을 따름)
+                    tab.contentEl.classList.remove('active-tab-content');
+                    for (const id in tabs) {
+                         if (id !== activeTabId) {
+                             tabs[id].contentEl.classList.add('hidden');
+                         }
+                    }
                 }
             }, 100); 
         }
