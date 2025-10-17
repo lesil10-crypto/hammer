@@ -20,8 +20,23 @@
         /* Noto Sans KR font global application */
         body {
             font-family: 'Noto Sans KR', sans-serif;
-            background-color: #f0f2f5; /* Comfortable silver background */
+            background-color: #e0e5ec; /* Updated background color for neumorphism */
+            color: #4a5568; /* Default text color */
         }
+
+        /* --- Global 3D Text Effect (Neumorphic Texture) --- */
+        /* 화면의 모든 글자에 입체적인 그림자 효과 적용 */
+        body, h1, h2, h3, h4, p, span, div, button, a {
+            text-shadow: 1px 1px 1px #ffffff, -1px -1px 1px #c5c9d2;
+        }
+        input, select, textarea {
+            text-shadow: none; /* Input fields should not have text shadow for readability */
+            background-color: #e0e5ec;
+        }
+        .prose p, .prose li { /* Reset for long-form text to improve readability */
+            text-shadow: none;
+        }
+        /* --- END --- */
 
         /* 3D texture (embossed effect) button style */
         .btn-3d {
@@ -34,6 +49,7 @@
             box-shadow: 6px 6px 12px #c5c9d2, -6px -6px 12px #fdffff;
             transition: all 0.2s ease-in-out;
             outline: none;
+            text-shadow: 1px 1px 1px #ffffff, -1px -1px 1px #c5c9d2; /* Button text texture */
         }
 
         .btn-3d:hover {
@@ -57,7 +73,7 @@
             box-shadow: 8px 8px 16px #c5c9d2, -8px -8px 16px #fdffff;
             margin-bottom: 2rem;
         }
-
+        
         /* Click to Search style */
         .clickable-word {
             cursor: pointer;
@@ -65,6 +81,7 @@
             color: #2b6cb0;
             transition: color 0.2s;
             border-bottom: 1px dotted #2b6cb0;
+            text-shadow: none; /* Clickable words should be clear */
         }
         .clickable-word:hover {
             color: #2c5282;
@@ -147,6 +164,7 @@
             transition: opacity 0.2s;
             white-space: nowrap;
             font-size: 0.75rem;
+            text-shadow: none; /* Tooltip text should be clear */
         }
 
         .icon-btn:hover .tooltip {
@@ -208,7 +226,7 @@
             </header>
 
             <!-- Search Bar -->
-            <div class="card p-6 mb-8 sticky top-4 z-10">
+            <div id="search-bar-container" class="card p-6 mb-8 sticky top-4 z-10">
                 <div class="flex flex-col sm:flex-row gap-4">
                     <input type="text" id="search-input" placeholder="영단어 또는 한글 뜻을 입력하세요..." class="w-full px-4 py-3 text-lg border-2 border-slate-300 bg-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
                     <button id="search-button" class="btn-3d w-full sm:w-auto">
@@ -216,6 +234,23 @@
                     </button>
                 </div>
             </div>
+
+            <!-- App Shortcut Buttons -->
+            <div id="shortcut-buttons" class="card p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <a href="https://www.naver.com" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-green-600 !p-2 !text-sm">
+                    <img src="https://placehold.co/20x20/03C75A/FFFFFF?text=N" alt="Naver Icon" class="w-5 h-5 mb-1" style="box-shadow: none;"> Naver
+                </a>
+                <a href="https://www.google.com" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-blue-600 !p-2 !text-sm">
+                    <i data-lucide="search-check" class="w-5 h-5 mb-1 text-red-500"></i> Google
+                </a>
+                <a href="https://www.youtube.com" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-red-600 !p-2 !text-sm">
+                    <i data-lucide="youtube" class="w-5 h-5 mb-1 text-red-700"></i> YouTube
+                </a>
+                <a href="https://www.clien.net" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-gray-700 !p-2 !text-sm">
+                    <i data-lucide="message-square" class="w-5 h-5 mb-1 text-blue-900"></i> Clien
+                </a>
+            </div> 
+            <!-- END NEW -->
 
             <!-- Loading Indicator -->
             <div id="loading-container" class="hidden text-center my-10">
@@ -361,12 +396,12 @@
           measurementId: "G-HMKJMNFGM4"
         };
         // =========================================================================
-        
+    
         // =========================================================================
         // === GitHub/외부 배포 시 여기에 Google AI Studio API 키를 입력하세요 ===
         // 1. https://aistudio.google.com/app/apikey 로 이동하여 API 키를 생성합니다.
         // 2. 생성된 키를 아래 따옴표 안에 붙여넣습니다.
-        const USER_GEMINI_API_KEY = "AIzaSyBWHFr5xqAV2xClvmKjLKVFJlWV7P2lodY"; // <-- 키가 통합되었습니다.
+        const USER_GEMINI_API_KEY = "AIzaSyDKmpQO6htm7jZ2DByUfGnmocZP7dpTJhs"; // <-- 여기에 새로운 API 키를 붙여넣으세요.
         // =========================================================================
 
         // ---------------------------
@@ -377,7 +412,8 @@
         const loadingContainer = document.getElementById('loading-container');
         const loadingText = document.getElementById('loading-text');
         const progressBar = document.getElementById('progress-bar');
-        
+        const searchBarContainer = document.getElementById('search-bar-container'); // 스크롤용
+
         const apiKey = USER_GEMINI_API_KEY; 
         const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent`;
         const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict`;
@@ -402,6 +438,11 @@
             const firebaseConfig = JSON.parse(configString || '{}');
 
             try {
+                // 경고: Firebase API Key와 Gemini API Key가 동일한 경우 경고를 표시합니다.
+                if (firebaseConfig.apiKey === USER_GEMINI_API_KEY && USER_GEMINI_API_KEY !== "YOUR_API_KEY_HERE") {
+                    console.warn("WARNING: Firebase API Key is the same as the Gemini API Key. They should be different. Check your configuration.");
+                }
+
                 if (!firebaseConfig.apiKey) {
                     console.error("Firebase config is missing.");
                     showToast("Firebase 구성 정보가 없습니다. GitHub 배포 시에는 코드에 직접 입력해야 합니다.", "error");
@@ -513,14 +554,21 @@
                 instances: [{ prompt: prompt }],
                 parameters: { "sampleCount": 1 }
             };
-            const result = await fetchWithRetry(imageApiUrl, payload);
-            const base64Data = result.predictions?.[0]?.bytesBase64Encoded;
+            // 이미지 로딩 실패 시 플레이스홀더를 반환하도록 catch 블록을 추가했습니다.
+            try {
+                const result = await fetchWithRetry(imageApiUrl, payload);
+                const base64Data = result.predictions?.[0]?.bytesBase64Encoded;
 
-            if (!base64Data) {
-                console.error("Image generation API response is empty or invalid. Full response:", result);
-                return `https://placehold.co/300x300/e0e5ec/4a5568?text=Image+Failed`;
+                if (!base64Data) {
+                    console.error("Image generation API response is empty or invalid. Full response:", result);
+                    // 실패 시 명확한 플레이스홀더 반환
+                    return `https://placehold.co/300x300/e74c3c/ffffff?text=Image+Load+Failed`; 
+                }
+                return `data:image/png;base64,${base64Data}`;
+            } catch (e) {
+                console.error("Imagen API call failed:", e);
+                return `https://placehold.co/300x300/e74c3c/ffffff?text=Image+Load+Failed`; 
             }
-            return `data:image/png;base64,${base64Data}`;
         }
         
         // ---------------------------
@@ -582,6 +630,10 @@
             showLoader(0, `"${wordQuery}" 검색을 시작합니다...`);
             searchButton.disabled = true;
 
+            // 검색 시작 시 결과 화면으로 스크롤 (헤더 아래로)
+            const headerHeight = document.querySelector('header').offsetHeight || 100;
+            window.scrollTo({ top: headerHeight, behavior: 'smooth' });
+
             try {
                 updateLoader(10, "기본 정보 생성 중...");
                 const initialInfoPrompt = `영어 단어 "${wordQuery}"에 대한 종합적인 정보를 생성해줘. 다음 JSON 형식을 반드시 따라줘:
@@ -607,16 +659,19 @@
                 renderEpisode(initialData, placeholderImg, contentContainer);
                 addWordToHistory(initialData.word, initialData.koreanMeaning);
 
+                const meaningImagePromises = [];
+                
                 callImagen(initialData.mainImagePrompt).then(imageUrl => {
                     currentTab.fullSearchResult.mainImageUrl = imageUrl;
                     if (searchId === currentTab.searchId) {
                         const imgEl = contentContainer.querySelector('#main-image');
                         if (imgEl) {
                             imgEl.src = imageUrl;
+                            imgEl.onerror = () => imgEl.src = `https://placehold.co/300x300/e74c3c/ffffff?text=Image+Load+Failed`; 
                             imgEl.onclick = () => showImageModal(imageUrl);
                         }
                     }
-                });
+                }).catch(e => console.error("Main Image Load Failed:", e));
                 
                 callImagen(initialData.episode.imagePrompt).then(imageUrl => {
                     currentTab.fullSearchResult.episodeImageUrl = imageUrl;
@@ -624,10 +679,11 @@
                         const imgEl = contentContainer.querySelector('#episode-image');
                         if (imgEl) {
                             imgEl.src = imageUrl;
+                            imgEl.onerror = () => imgEl.src = `https://placehold.co/300x300/e74c3c/ffffff?text=Image+Load+Failed`; 
                             imgEl.onclick = () => showImageModal(imageUrl);
                         }
                     }
-                });
+                }).catch(e => console.error("Episode Image Load Failed:", e));
                 
                 updateLoader(40, "의미 분석 생성 중...");
                 const meaningsPrompt = `영어 단어 "${initialData.word}"의 의미를 분석해줘. 핵심 의미, 부가적 의미, 숙어 표현 각각에 대해 설명과 대표 예문, 그리고 그 예문에 맞는 'Dr. Slump' 스타일의 재미있는 삽화 프롬프트를 생성해줘. 다음 JSON 형식을 반드시 따라줘:
@@ -640,7 +696,7 @@
                 currentTab.fullSearchResult.meaningsData = meaningsData;
                 if (searchId !== currentTab.searchId) return;
 
-                await renderMeanings(meaningsData, initialData.word, searchId, currentTab, contentContainer);
+                await renderMeanings(meaningsData, initialData.word, searchId, currentTab, contentContainer, meaningImagePromises);
                 
                 renderSentenceCrafter(initialData.word, contentContainer);
 
@@ -671,6 +727,10 @@
                 const buttonContainer = renderDeepDiveButtonsContainer(contentContainer);
                 appendConceptTreeButton(buttonContainer, fastDeepDiveData.conceptTree);
                 renderDeepDive(fastDeepDiveData, contentContainer);
+                
+                // 모든 이미지 로딩이 완료될 때까지 기다림
+                await Promise.all(meaningImagePromises.map(p => p.catch(e => e))); 
+                
                 hideLoader();
                 showToast("핵심 정보 로딩 완료! 백과사전 정보를 생성합니다...", "info");
 
@@ -1105,23 +1165,29 @@
             modalImage.src = ''; 
         }
 
-        function showEncyclopedia(data) {
-            const renderEncyclopediaSection = (title, content_en, content_ko) => {
-                if (!content_en) return '';
-                return `
-                    <div class="mt-6">
-                        <h4 class="text-xl font-bold mb-2">${title}</h4>
-                        <div class="prose max-w-none text-justify space-y-4">
-                            <p class="text-gray-700">${content_ko.replace(/\n/g, '<br>')}</p>
-                            <details class="text-sm">
-                                <summary class="cursor-pointer text-gray-500">영어 원문 보기</summary>
-                                <p class="mt-2 text-gray-600">${addClickToSearch(content_en.replace(/\n/g, '<br>'))}</p>
-                            </details>
-                        </div>
-                    </div>
-                `;
-            }
+        // 백과사전 섹션 렌더링 함수 수정: content가 null/undefined일 경우 빈 문자열로 처리하여 오류 방지
+        function renderEncyclopediaSection(title, content_en, content_ko) {
+            // Null/undefined 체크 및 빈 문자열로 대체
+            const safe_content_en = content_en || '';
+            const safe_content_ko = content_ko || '';
 
+            if (!safe_content_en && !safe_content_ko) return '';
+            
+            return `
+                <div class="mt-6">
+                    <h4 class="text-xl font-bold mb-2">${title}</h4>
+                    <div class="prose max-w-none text-justify space-y-4">
+                        <p class="text-gray-700">${safe_content_ko.replace(/\n/g, '<br>')}</p>
+                        <details class="text-sm">
+                            <summary class="cursor-pointer text-gray-500">영어 원문 보기</summary>
+                            <p class="mt-2 text-gray-600">${addClickToSearch(safe_content_en.replace(/\n/g, '<br>'))}</p>
+                        </details>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function showEncyclopedia(data) {
             modalContent.innerHTML = `
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-2xl font-bold">백과사전식 설명</h3>
@@ -1327,17 +1393,17 @@
                     `;
                 } else { // sentences
                     return baseHtml + `
-                                <div class="truncate">
-                                    <p class="font-semibold truncate">${addClickToSearch(item.en)}</p>
-                                    <p class="text-sm truncate">${item.ko}</p>
-                                </div>
+                            <div class="truncate">
+                                <p class="font-semibold truncate">${addClickToSearch(item.en)}</p>
+                                <p class="text-sm truncate">${item.ko}</p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-1 flex-shrink-0">
-                            <button class="icon-btn" onclick="speak('${item.en.replace(/'/g, "\\'")}', 'en-US')"><i data-lucide="volume-2"></i><span class="tooltip">영어 듣기</span></button>
-                           <button onclick="toggleReadStatus('${item.id}', 'sentences')" class="icon-btn"><i data-lucide="${item.read ? 'eye-off' : 'eye'}"></i><span class="tooltip">${item.read ? '읽지 않음으로' : '읽음으로'}</span></button>
-                           <button onclick="deleteListItem('${item.id}', 'sentences')" class="icon-btn text-red-500 hover:bg-red-100"><i data-lucide="trash-2"></i><span class="tooltip">삭제</span></button>
-                        </div>
+                    </div>
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                        <button class="icon-btn" onclick="speak('${item.en.replace(/'/g, "\\'")}', 'en-US')"><i data-lucide="volume-2"></i><span class="tooltip">영어 듣기</span></button>
+                       <button onclick="toggleReadStatus('${item.id}', 'sentences')" class="icon-btn"><i data-lucide="${item.read ? 'eye-off' : 'eye'}"></i><span class="tooltip">${item.read ? '읽지 않음으로' : '읽음으로'}</span></button>
+                       <button onclick="deleteListItem('${item.id}', 'sentences')" class="icon-btn text-red-500 hover:bg-red-100"><i data-lucide="trash-2"></i><span class="tooltip">삭제</span></button>
+                    </div>
                     </div>
                     `;
                 }
@@ -1540,7 +1606,8 @@
                 return;
             }
             
-            const storageRef = ref(storage, `artifacts/${appId}/users/${userId}/${file.name}`);
+            // Storage 경로를 userId를 사용하여 수정했습니다.
+            const storageRef = ref(storage, `artifacts/${appId}/users/${userId}/files/${file.name}`);
             const uploadTask = uploadBytesResumable(storageRef, file);
             const uploadProgressContainer = document.getElementById('upload-progress-container');
             const uploadProgressBar = document.getElementById('upload-progress-bar');
