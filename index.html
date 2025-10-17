@@ -172,16 +172,17 @@
             opacity: 1;
         }
 
-        /* Print-specific styles for better output */
+        /* Print-specific styles for better output (FIXED) */
         @media print {
             body {
                 background-color: #fff !important;
                 font-family: 'Times New Roman', serif;
+                margin: 0;
+                padding: 0;
             }
-            /* ----------------------------------------------------------- */
-            /* FIX: 인쇄 시 숨겨야 할 모든 비-콘텐츠 요소를 명시적으로 숨김 */
-            /* ----------------------------------------------------------- */
-            #app-container > header, 
+            
+            /* 모든 주요 UI와 컨테이너를 숨기고, print-container만 보이게 함 */
+            #app-container,
             #search-bar-container,
             #shortcut-buttons, 
             #loading-container,
@@ -190,47 +191,48 @@
             .modal, .toast, .tooltip, #auth-container, #confirmation-modal {
                 display: none !important;
             }
-            
-            /* FIX: 메인 콘텐츠의 부모인 #tab-content-container는 보존 */
-            #tab-content-container {
+
+            /* print-container만 인쇄 영역에 표시 */
+            #print-container {
                 display: block !important;
-            }
-            
-            #tab-content-container > div {
-                /* 기본적으로 모든 탭 내용을 숨기지만, active-tab-content와 print-only 영역은 보이게 함 */
-                display: none !important;
-            }
-            
-            .active-tab-content, #print-only-modal-content {
-                display: block !important;
-                max-width: 100%;
-                padding: 0;
-                margin: 0;
-            }
-            
-            #app-container {
-                max-width: 100%;
-                padding: 0;
-                margin: 0;
+                width: 100%;
+                margin: 0 auto;
+                padding: 0 1cm; /* 여백 추가 */
             }
 
-            .card, .btn-3d, .icon-btn {
+            /* 인쇄 헤더 (제목) */
+            .print-header {
+                display: block !important;
+                text-align: center;
+                margin-bottom: 20px;
+                padding-top: 10px;
+            }
+            .print-header h1 {
+                font-size: 24pt;
+                font-weight: bold;
+                color: #000;
+                text-shadow: none;
+            }
+            
+            /* 카드 스타일 리셋 */
+            .card {
                 box-shadow: none;
                 border: 1px solid #ccc;
                 background-color: #fff !important;
                 margin-bottom: 1.5rem;
+                padding: 10px !important;
             }
-            .clickable-word {
-                color: #000;
-                border: none;
-                font-weight: bold;
-            }
+            
+            /* 이미지 처리 */
             img {
+                max-width: 100%;
+                height: auto;
                 page-break-inside: avoid;
             }
-            /* Hide interactive-only elements in print view */
-            .icon-btn, .btn-3d[onclick*="speak"], #print-btn, .quiz-button, [id^="print-btn"], footer button, #sentence-craft-button, .close-tab-btn {
-                display: none !important;
+
+            /* 인쇄 전용 콘텐츠에만 텍스트 섀도우 제거 */
+            #print-container * {
+                text-shadow: none !important;
             }
         }
 
@@ -257,10 +259,9 @@
                 </div>
             </div>
 
-            <!-- App Shortcut Buttons - ADDED ICONS -->
+            <!-- App Shortcut Buttons -->
             <div id="shortcut-buttons" class="card p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <a href="https://www.naver.com" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-green-600 !p-2 !text-sm">
-                    <!-- Naver: 커스텀 SVG로 네오모피즘 스타일 구현 -->
                     <svg class="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect x="2" y="2" width="20" height="20" rx="4" fill="#03C75A"/>
                         <path d="M12 7V17M12 7L10 9M12 7L14 9M10 17H14" stroke="#e0e5ec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -269,22 +270,18 @@
                      Naver
                 </a>
                 <a href="https://www.google.com" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-blue-600 !p-2 !text-sm">
-                    <!-- Google: Lucide Icons 사용 및 색상 조정 -->
                     <i data-lucide="globe-2" class="w-5 h-5 mb-1 text-blue-500" style="text-shadow: 1px 1px 1px #e0e5ec, -1px -1px 1px #c5c9d2;"></i> 
                     Google
                 </a>
                 <a href="https://www.youtube.com" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-red-600 !p-2 !text-sm">
-                    <!-- YouTube: Lucide Icons 사용 및 색상 조정 -->
                     <i data-lucide="youtube" class="w-5 h-5 mb-1 text-red-600" style="text-shadow: 1px 1px 1px #e0e5ec, -1px -1px 1px #c5c9d2;"></i> 
                     YouTube
                 </a>
                 <a href="https://www.clien.net" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-gray-700 !p-2 !text-sm">
-                    <!-- Clien: Lucide Icons 사용 및 색상 조정 -->
                     <i data-lucide="message-square" class="w-5 h-5 mb-1 text-blue-900" style="text-shadow: 1px 1px 1px #e0e5ec, -1px -1px 1px #c5c9d2;"></i> 
                     Clien
                 </a>
             </div> 
-            <!-- END NEW -->
 
             <!-- Loading Indicator -->
             <div id="loading-container" class="hidden text-center my-10">
@@ -303,8 +300,8 @@
             <!-- Content Area -->
             <main id="tab-content-container"></main>
 
-            <!-- FIX: Hidden container to hold modal content during printing -->
-            <div id="print-only-modal-content" class="hidden"></div>
+            <!-- This is no longer used for printing, but kept for legacy/potential reuse -->
+            <div id="print-only-modal-content" class="hidden"></div> 
         </div>
 
         <!-- Fixed Bottom Menu -->
@@ -414,6 +411,18 @@
     <!-- Live Translation Tooltip -->
     <div id="word-tooltip" class="hidden absolute z-[100] px-3 py-1.5 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-sm"></div>
 
+    <!-- NEW: Print Container (Initially hidden) -->
+    <div id="print-container" style="display: none;">
+        <div class="print-header">
+            <h1 class="text-4xl">AI Vocabulary Builder</h1>
+            <p>AI와 함께 단어의 모든 것을 탐험하세요</p>
+            <hr style="border: 1px solid #ccc; margin-top: 10px;">
+        </div>
+        <div id="print-content-area">
+            <!-- Dynamic content will be inserted here -->
+        </div>
+    </div>
+
     <script type="module">
         // Firebase Modular SDK imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -450,8 +459,11 @@
         const loadingText = document.getElementById('loading-text');
         const progressBar = document.getElementById('progress-bar');
         const searchBarContainer = document.getElementById('search-bar-container'); // 스크롤용
-        const printOnlyModalContent = document.getElementById('print-only-modal-content'); // 인쇄 전용 컨테이너
-
+        
+        // NEW PRINT DOM REFERENCES
+        const printContainer = document.getElementById('print-container');
+        const printContentArea = document.getElementById('print-content-area');
+        
         const apiKey = USER_GEMINI_API_KEY; 
         const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent`;
         const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict`;
@@ -1642,37 +1654,31 @@
                 return;
             }
             
-            // 1. 인쇄할 탭 콘텐츠에만 클래스를 적용하여 보이게 합니다. (FIX: 메인 콘텐츠 표시)
-            const allContentDivs = document.querySelectorAll('#tab-content-container > div');
-            allContentDivs.forEach(div => div.classList.remove('active-tab-content')); 
-            
-            // 현재 탭의 콘텐츠를 '보이는' 상태로 만듭니다.
-            tab.contentEl.classList.add('active-tab-content'); 
-            tab.contentEl.classList.remove('hidden'); // hidden 클래스 제거
-
-            // 2. 모달 콘텐츠(백과사전, 개념 트리)를 인쇄 영역에 동적으로 삽입
+            // 1. 인쇄할 모든 콘텐츠를 HTML 문자열로 준비
+            const mainContentHtml = tab.contentEl.innerHTML;
             const encyclopediaHtml = getEncyclopediaHtml(tab.fullSearchResult.encyclopediaData.encyclopedia);
             const conceptTreeHtml = getConceptTreeHtml(tab.fullSearchResult.fastDeepDiveData.conceptTree);
             
-            printOnlyModalContent.innerHTML = encyclopediaHtml + conceptTreeHtml;
-            
+            // 2. 임시 인쇄 컨테이너에 모든 내용 결합
+            printContentArea.innerHTML = mainContentHtml + encyclopediaHtml + conceptTreeHtml;
+
             // 3. 인쇄 실행
+            printContainer.style.display = 'block'; // 인쇄 컨테이너를 보이게 하여 인쇄 타겟으로 설정
+            
+            // 4. Lucide 아이콘을 인쇄 컨테이너 내부에서 다시 렌더링 (인쇄 내용에 아이콘이 포함되도록)
+            if (window.lucide) {
+                printContainer.querySelectorAll('[data-lucide]').forEach(el => el.remove());
+                window.lucide.createIcons({ attr: 'data-lucide', element: printContainer });
+            }
+
+            // 5. 인쇄 실행
             window.print();
             
-            // 4. 인쇄 후 클래스 제거 및 동적 콘텐츠 비우기 (클린업)
+            // 6. 인쇄 후 클린업: 임시 컨테이너 숨기고 내용 비우기
             setTimeout(() => {
-                printOnlyModalContent.innerHTML = ''; 
-                tab.contentEl.classList.remove('active-tab-content');
-                
-                // 원래의 탭 상태로 복구 (현재 활성 탭만 보이게)
-                for (const id in tabs) {
-                     if (id === activeTabId) {
-                         tabs[id].contentEl.classList.remove('hidden');
-                     } else {
-                         tabs[id].contentEl.classList.add('hidden');
-                     }
-                }
-            }, 100); 
+                printContainer.style.display = 'none';
+                printContentArea.innerHTML = '';
+            }, 500); 
         }
 
         // ---------------------------
