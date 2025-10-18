@@ -274,7 +274,7 @@
                         <path d="M12 7V17M12 7L10 9M12 7L14 9M10 17H14" stroke="#e0e5ec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         <circle cx="12" cy="12" r="11" fill="none" stroke="#03C75A" stroke-width="2"/>
                     </svg>
-                     Naver
+                    네이버
                 </a>
                 <a href="https://www.google.com" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-blue-600 !p-2 !text-sm">
                     <!-- Google Icon -->
@@ -292,6 +292,16 @@
                     Clien
                 </a>
             </div> 
+            
+            <!-- New: Google Calendar Feature -->
+            <div id="google-calendar" class="card p-6">
+                <h3 class="text-2xl font-bold mb-4 flex items-center text-blue-700">
+                    <i data-lucide="calendar" class="mr-2 text-blue-500"></i>AI 학습 플래너 (월별 달력)
+                </h3>
+                <div id="calendar-container" class="w-full">
+                    <!-- Calendar will be rendered here -->
+                </div>
+            </div>
 
             <!-- Loading Indicator -->
             <div id="loading-container" class="hidden text-center my-10">
@@ -452,7 +462,7 @@
           measurementId: "G-HMKJMNFGM4"
         };
         // =========================================================================
-    
+        
         // =========================================================================
         // === GitHub/외부 배포 시 여기에 Google AI Studio API 키를 입력하세요 ===
         // 1. https://aistudio.google.com/app/apikey 로 이동하여 API 키를 생성합니다.
@@ -530,6 +540,7 @@
                 loadUserLists();
                 listenForFiles();
                 safeCreateIcons();
+                initializeCalendar(); // NEW: Initialize the calendar
 
             } catch (error) {
                 console.error("Firebase Initialization/Auth Error: ", error);
@@ -2077,6 +2088,189 @@
         markReadBtn.addEventListener('click', () => performBulkAction('mark-read'));
         markUnreadBtn.addEventListener('click', () => performBulkAction('mark-unread'));
         deleteSelectedBtn.addEventListener('click', () => performBulkAction('delete'));
+
+        // ---------------------------
+        // 12. Google Calendar Feature (Simulated Interactive Planner)
+        // ---------------------------
+        
+        const CALENDAR_CONTAINER_ID = 'calendar-container';
+        let currentYear, currentMonth;
+
+        function createChevronLeftIcon(size = 'w-5 h-5') {
+             return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${size}"><path d="m15 18-6-6 6-6"/></svg>`;
+        }
+        
+        function createChevronRightIcon(size = 'w-5 h-5') {
+             return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${size}"><path d="m9 18 6-6-6-6"/></svg>`;
+        }
+
+        function initializeCalendar() {
+            const today = new Date();
+            currentYear = today.getFullYear();
+            currentMonth = today.getMonth(); // 0-indexed (0 = Jan)
+            renderCalendar(currentYear, currentMonth);
+        }
+
+        function renderCalendar(year, month) {
+            const container = document.getElementById(CALENDAR_CONTAINER_ID);
+            if (!container) return;
+
+            const date = new Date(year, month);
+            const monthName = date.toLocaleString('ko-KR', { month: 'long', year: 'numeric' });
+            
+            // Generate Header and Navigation
+            container.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <button class="icon-btn" onclick="changeMonth(-1)">
+                        ${createChevronLeftIcon('w-5 h-5')}
+                        <span class="tooltip">이전 달</span>
+                    </button>
+                    <h4 class="text-xl font-bold text-gray-700">${monthName}</h4>
+                    <button class="icon-btn" onclick="changeMonth(1)">
+                        ${createChevronRightIcon('w-5 h-5')}
+                        <span class="tooltip">다음 달</span>
+                    </button>
+                </div>
+                ${generateMonthView(year, month)}
+                <div class="text-center mt-4">
+                     <p class="text-sm text-gray-500">파란색 배경은 오늘 날짜이며, 하단의 점은 학습 기록 유무를 나타냅니다.</p>
+                </div>
+            `;
+            safeCreateIcons();
+        }
+        
+        window.changeMonth = function(offset) {
+            currentMonth += offset;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            } else if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar(currentYear, currentMonth);
+        }
+
+        function generateMonthView(year, month) {
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startingDay = firstDay.getDay(); // 0 = Sunday, 6 = Saturday
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+
+            const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+            
+            let html = `<div class="grid grid-cols-7 text-center font-bold text-sm text-blue-600 border-b border-slate-300">`;
+            dayNames.forEach((day, index) => {
+                const color = index === 0 ? 'text-red-500' : (index === 6 ? 'text-blue-500' : 'text-gray-700');
+                html += `<div class="py-2 ${color}">${day}</div>`;
+            });
+            html += `</div>`;
+            
+            html += `<div class="grid grid-cols-7 grid-rows-6 gap-0.5 text-center text-sm">`;
+
+            let day = 1;
+            // Empty slots for preceding month days
+            for (let i = 0; i < startingDay; i++) {
+                html += `<div class="p-2 text-gray-400 bg-slate-100 rounded-lg"></div>`;
+            }
+
+            // Days of the month
+            for (let i = 0; i < daysInMonth; i++) {
+                const currentDay = day;
+                const dateKey = `${year}-${month}-${currentDay}`;
+                const isToday = dateKey === todayStr;
+                const dayOfWeek = (startingDay + i) % 7;
+                
+                let dayClass = 'p-2 rounded-lg cursor-pointer transition relative h-16 sm:h-20';
+                dayClass += isToday ? ' bg-blue-500 text-white font-bold shadow-inner' : ' bg-slate-100 hover:bg-slate-200';
+                
+                // Color for weekend days (unless it's today)
+                if (!isToday) {
+                    dayClass += dayOfWeek === 0 ? ' text-red-500' : (dayOfWeek === 6 ? ' text-blue-500' : ' text-gray-700');
+                } else {
+                     dayClass += ' text-white'; // Today's date should be white text on blue background
+                }
+
+                // Simulate event presence 
+                const hasEvent = (currentDay % 5 === 0) || (currentDay % 7 === 1); 
+                
+                let eventMarkers = '';
+                if (hasEvent) {
+                    const markerColor = isToday ? 'bg-white' : 'bg-green-500';
+                    const markerText = isToday ? '오늘의 학습' : '';
+                    
+                    eventMarkers = `<div class="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex gap-1 items-center text-xs">
+                                        <span class="w-1.5 h-1.5 ${markerColor} rounded-full"></span>
+                                        ${markerText}
+                                    </div>`;
+                }
+
+                html += `
+                    <div class="${dayClass}" onclick="showDayDetails('${dateKey}')">
+                        <span class="block">${currentDay}</span>
+                        ${eventMarkers}
+                    </div>
+                `;
+                day++;
+            }
+            
+            // Empty slots for succeeding month days (fill the row/grid)
+            const totalCells = startingDay + daysInMonth;
+            const remaining = totalCells <= 35 ? 35 - totalCells : 42 - totalCells; // Max 5 rows (35 days) or 6 rows (42 days)
+            for (let i = 0; i < remaining; i++) {
+                html += `<div class="p-2 text-gray-400 bg-slate-100 rounded-lg"></div>`;
+            }
+            
+            html += `</div>`;
+            return html;
+        }
+
+        window.showDayDetails = function(dateKey) {
+            const [year, month, day] = dateKey.split('-');
+            const date = new Date(year, parseInt(month), day);
+            const dateStr = date.toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+            
+            // Simple mock data for demonstration
+            const isEventDay = (parseInt(day) % 5 === 0) || (parseInt(day) % 7 === 1);
+            let detailsHtml = ``;
+            
+            if(isEventDay) {
+                 detailsHtml = `
+                    <h4 class="text-xl font-bold mb-3 text-blue-600">학습 기록</h4>
+                    <ul class="list-disc list-inside space-y-2">
+                        <li class="flex items-start">
+                           <i data-lucide="book-open" class="w-5 h-5 mr-2 text-green-500 flex-shrink-0 mt-1"></i>
+                           <div><strong>새 단어 학습:</strong> 'Cognizant', 'Ephemeral'</div>
+                        </li>
+                        <li class="flex items-start">
+                           <i data-lucide="pencil" class="w-5 h-5 mr-2 text-yellow-500 flex-shrink-0 mt-1"></i>
+                           <div><strong>퀴즈 완료:</strong> 3개 단어 (정답률 80%)</div>
+                        </li>
+                        <li class="flex items-start">
+                           <i data-lucide="file-text" class="w-5 h-5 mr-2 text-purple-500 flex-shrink-0 mt-1"></i>
+                           <div><strong>문서 업로드:</strong> '2024년_계획.pdf'</div>
+                        </li>
+                    </ul>
+                    <p class="mt-4 text-gray-600">오늘의 학습 목표: 관련 예문 10개 암기</p>
+                 `;
+            } else {
+                 detailsHtml = `<p class="text-gray-500">저장된 학습 기록이 없습니다. 새로운 단어를 검색해보세요!</p>`;
+            }
+
+            modalContent.innerHTML = `
+                <div class="flex justify-between items-center mb-4 border-b pb-3 border-slate-300">
+                    <h3 class="text-2xl font-bold text-gray-700">${dateStr}</h3>
+                    <button onclick="hideModal()" class="text-gray-500 hover:text-gray-800"><i data-lucide="x"></i></button>
+                </div>
+                ${detailsHtml}
+            `;
+            
+            modalContainer.classList.remove('hidden');
+            modalContainer.classList.add('flex');
+            safeCreateIcons();
+        }
 
         // App Initialization
         document.addEventListener('DOMContentLoaded', initializeFirebase);
