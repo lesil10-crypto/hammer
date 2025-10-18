@@ -125,6 +125,7 @@
             transform: scale(1.03);
         }
 
+        /* Icon Button Base Style (Circular Neumorphism) */
         .icon-btn {
             display: inline-flex;
             align-items: center;
@@ -144,6 +145,12 @@
         }
         .icon-btn:active {
             box-shadow: inset 2px 2px 4px #c5c9d2, inset -2px -2px 4px #fdffff;
+        }
+
+        /* Icon SVG Styling - Adding Neumorphism Texture to the Icon Path itself */
+        .icon-btn svg path, .icon-btn svg circle, .icon-btn svg polygon {
+            filter: drop-shadow(1px 1px 1px rgba(255, 255, 255, 0.7)) drop-shadow(-1px -1px 1px rgba(0, 0, 0, 0.2));
+            transition: filter 0.2s;
         }
         
         /* Tooltip styles */
@@ -261,7 +268,7 @@
             <!-- App Shortcut Buttons -->
             <div id="shortcut-buttons" class="card p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <a href="https://www.naver.com" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-green-600 !p-2 !text-sm">
-                    <!-- Naver: 커스텀 SVG로 네오모피즘 스타일 구현 -->
+                    <!-- Naver Icon -->
                     <svg class="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect x="2" y="2" width="20" height="20" rx="4" fill="#03C75A"/>
                         <path d="M12 7V17M12 7L10 9M12 7L14 9M10 17H14" stroke="#e0e5ec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -270,17 +277,17 @@
                      Naver
                 </a>
                 <a href="https://www.google.com" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-blue-600 !p-2 !text-sm">
-                    <!-- Google: Lucide Icons 사용 및 색상 조정 -->
+                    <!-- Google Icon -->
                     <i data-lucide="globe-2" class="w-5 h-5 mb-1 text-blue-500" style="text-shadow: 1px 1px 1px #e0e5ec, -1px -1px 1px #c5c9d2;"></i> 
                     Google
                 </a>
                 <a href="https://www.youtube.com" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-red-600 !p-2 !text-sm">
-                    <!-- YouTube: Lucide Icons 사용 및 색상 조정 -->
+                    <!-- YouTube Icon -->
                     <i data-lucide="youtube" class="w-5 h-5 mb-1 text-red-600" style="text-shadow: 1px 1px 1px #e0e5ec, -1px -1px 1px #c5c9d2;"></i> 
                     YouTube
                 </a>
                 <a href="https://www.clien.net" target="_blank" class="btn-3d flex flex-col items-center justify-center p-3 text-gray-700 !p-2 !text-sm">
-                    <!-- Clien: Lucide Icons 사용 및 색상 조정 -->
+                    <!-- Clien Icon -->
                     <i data-lucide="message-square" class="w-5 h-5 mb-1 text-blue-900" style="text-shadow: 1px 1px 1px #e0e5ec, -1px -1px 1px #c5c9d2;"></i> 
                     Clien
                 </a>
@@ -846,11 +853,11 @@
                         <div class="w-full md:w-3/5">
                             <div class="flex items-center gap-4 mb-4">
                                 <h2 class="text-5xl font-bold">${data.word}</h2>
-                                <button onclick="speak('${data.word}', 'en-US')" class="btn-3d p-3"><i data-lucide="volume-2"></i></button>
+                                <button onclick="speak('${data.word}', 'en-US')" class="btn-3d p-3">${createVolumeIcon()}</button>
                             </div>
                             <div class="flex items-center gap-2">
                                 <p class="text-2xl text-gray-600">${data.koreanMeaning}</p>
-                                <button onclick="speak('${data.koreanMeaning}', 'ko-KR')" class="btn-3d p-3"><i data-lucide="volume-2"></i></button>
+                                <button onclick="speak('${data.koreanMeaning}', 'ko-KR')" class="btn-3d p-3">${createVolumeIcon()}</button>
                             </div>
                             <p class="text-lg text-gray-500 mt-2">[${data.pronunciation}]</p>
                         </div>
@@ -873,11 +880,11 @@
                     </div>
                     <div class="mt-4 flex flex-col sm:flex-row gap-2">
                         <button class="icon-btn" onclick="speak('${episode.story.replace(/'/g, "\\'")}', 'en-US')">
-                            <i data-lucide="volume-2" class="w-5 h-5"></i>
+                            ${createVolumeIcon('w-5 h-5')}
                             <span class="tooltip">영어 듣기</span>
                         </button>
                         <button class="icon-btn" onclick="speak('${episode.story_ko.replace(/'/g, "\\'")}', 'ko-KR')">
-                            <i data-lucide="volume-2" class="w-5 h-5"></i>
+                            ${createVolumeIcon('w-5 h-5')}
                             <span class="tooltip">한국어 듣기</span>
                         </button>
                         <button class="btn-3d flex-grow" onclick="expandStory(this, '${word}', '${episode.story.replace(/'/g, "\\'")}', '${episode.story_ko.replace(/'/g, "\\'")}')">✨ 이야기 더 만들기</button>
@@ -970,9 +977,18 @@
                             </div>
                         </div>
                         <div class="flex items-center flex-shrink-0 gap-1">
-                            <button class="icon-btn" onclick="speak('${ex.en.replace(/'/g, "\\'")}', 'en-US')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">영어 듣기</span></button>
-                            <button class="icon-btn" onclick="speak('${ex.ko.replace(/'/g, "\\'")}', 'ko-KR')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">한국어 듣기</span></button>
-                            <button class="icon-btn" onclick="saveSentence('${ex.en.replace(/'/g, "\\'")}', '${ex.ko.replace(/'/g, "\\'")}')"><i data-lucide="save" class="w-5 h-5"></i><span class="tooltip">저장하기</span></button>
+                            <button class="icon-btn" onclick="speak('${ex.en.replace(/'/g, "\\'")}', 'en-US')">
+                                ${createVolumeIcon('w-5 h-5')}
+                                <span class="tooltip">영어 듣기</span>
+                            </button>
+                            <button class="icon-btn" onclick="speak('${ex.ko.replace(/'/g, "\\'")}', 'ko-KR')">
+                                ${createVolumeIcon('w-5 h-5')}
+                                <span class="tooltip">한국어 듣기</span>
+                            </button>
+                            <button class="icon-btn" onclick="saveSentence('${ex.en.replace(/'/g, "\\'")}', '${ex.ko.replace(/'/g, "\\'")}')">
+                                ${createSaveIcon('w-5 h-5')}
+                                <span class="tooltip">저장하기</span>
+                            </button>
                         </div>
                     </li>`).join('');
         
@@ -987,9 +1003,18 @@
                             <p class="text-md text-gray-600">${meaning.exampleSentenceTranslation}</p>
                         </div>
                         <div class="flex items-center gap-2 mt-2">
-                            <button class="icon-btn" onclick="speak('${meaning.exampleSentence.replace(/'/g, "\\'")}', 'en-US')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">영어 듣기</span></button>
-                            <button class="icon-btn" onclick="speak('${meaning.exampleSentenceTranslation.replace(/'/g, "\\'")}', 'ko-KR')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">한국어 듣기</span></button>
-                            <button class="icon-btn" onclick="saveSentence('${meaning.exampleSentence.replace(/'/g, "\\'")}', '${meaning.exampleSentenceTranslation.replace(/'/g, "\\'")}')"><i data-lucide="save" class="w-5 h-5"></i><span class="tooltip">저장하기</span></button>
+                            <button class="icon-btn" onclick="speak('${meaning.exampleSentence.replace(/'/g, "\\'")}', 'en-US')">
+                                ${createVolumeIcon('w-5 h-5')}
+                                <span class="tooltip">영어 듣기</span>
+                            </button>
+                            <button class="icon-btn" onclick="speak('${meaning.exampleSentenceTranslation.replace(/'/g, "\\'")}', 'ko-KR')">
+                                ${createVolumeIcon('w-5 h-5')}
+                                <span class="tooltip">한국어 듣기</span>
+                            </button>
+                            <button class="icon-btn" onclick="saveSentence('${meaning.exampleSentence.replace(/'/g, "\\'")}', '${meaning.exampleSentenceTranslation.replace(/'/g, "\\'")}')">
+                                ${createSaveIcon('w-5 h-5')}
+                                <span class="tooltip">저장하기</span>
+                            </button>
                         </div>
                     </div>
                     <p class="font-medium mt-4 mb-2">추가 예문:</p>
@@ -1028,15 +1053,15 @@
                                 <p class="text-gray-600">${q.translation}</p>
                                 <div class="mt-2 flex gap-2">
                                     <button class="icon-btn" onclick="speak('${q.quote.replace(/'/g, "\\'")}', 'en-US')">
-                                        <i data-lucide="volume-2" class="w-5 h-5"></i>
+                                        ${createVolumeIcon('w-5 h-5')}
                                         <span class="tooltip">영어 듣기</span>
                                     </button>
                                     <button class="icon-btn" onclick="speak('${q.translation.replace(/'/g, "\\'")}', 'ko-KR')">
-                                        <i data-lucide="volume-2" class="w-5 h-5"></i>
+                                        ${createVolumeIcon('w-5 h-5')}
                                         <span class="tooltip">한국어 듣기</span>
                                     </button>
                                     <button class="icon-btn" onclick="saveSentence('${q.quote.replace(/'/g, "\\'")}', '${q.translation.replace(/'/g, "\\'")}')">
-                                        <i data-lucide="save" class="w-5 h-5"></i>
+                                        ${createSaveIcon('w-5 h-5')}
                                         <span class="tooltip">저장하기</span>
                                     </button>
                                 </div>
@@ -1063,15 +1088,15 @@
                                             </div>
                                             <div class="flex items-center flex-shrink-0 gap-1 mt-1">
                                                 <button class="icon-btn" onclick="speak('${d.line.replace(/'/g, "\\'")}', 'en-US')">
-                                                    <i data-lucide="volume-2" class="w-5 h-5"></i>
+                                                    ${createVolumeIcon('w-5 h-5')}
                                                     <span class="tooltip">영어 듣기</span>
                                                 </button>
                                                 <button class="icon-btn" onclick="speak('${d.translation.replace(/'/g, "\\'")}', 'ko-KR')">
-                                                    <i data-lucide="volume-2" class="w-5 h-5"></i>
+                                                    ${createVolumeIcon('w-5 h-5')}
                                                     <span class="tooltip">한국어 듣기</span>
                                                 </button>
                                                 <button class="icon-btn" onclick="saveSentence('${d.line.replace(/'/g, "\\'")}', '${d.translation.replace(/'/g, "\\'")}')">
-                                                    <i data-lucide="save" class="w-5 h-5"></i>
+                                                    ${createSaveIcon('w-5 h-5')}
                                                     <span class="tooltip">저장하기</span>
                                                 </button>
                                             </div>
@@ -1125,6 +1150,18 @@
         // 4. UI/UX and Utility Functions
         // ---------------------------
         
+        // --- NEW: Custom Icon functions for Neumorphism styling ---
+        function createVolumeIcon(size = 'w-5 h-5') {
+            // Volume-2 Lucide SVG (입체적인 텍스처를 위한 필터는 CSS에서 처리)
+            return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${size} text-blue-500"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+        }
+        
+        function createSaveIcon(size = 'w-5 h-5') {
+            // Save Lucide SVG
+            return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${size} text-green-600"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>`;
+        }
+        // --- END NEW ---
+
         window.checkQuizAnswer = function(button, index, correctAnswer) {
             const container = button.closest(`#quiz-container-${index}`);
             const selected = container.querySelector(`input[name="quiz-${index}"]:checked`);
@@ -1468,8 +1505,8 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-1 flex-shrink-0">
-                            <button onclick="toggleReadStatus('${item.id}', 'words')" class="icon-btn"><i data-lucide="${item.read ? 'eye-off' : 'eye'}"></i> <span class="tooltip">${item.read ? '읽지 않음으로' : '읽음으로'}</span></button>
-                            <button onclick="deleteListItem('${item.id}', 'words')" class="icon-btn text-red-500 hover:bg-red-100"><i data-lucide="trash-2"></i><span class="tooltip">삭제</span></button>
+                            <button onclick="toggleReadStatus('${item.id}', 'words')" class="icon-btn">${item.read ? createEyeOffIcon() : createEyeIcon()} <span class="tooltip">${item.read ? '읽지 않음으로' : '읽음으로'}</span></button>
+                            <button onclick="deleteListItem('${item.id}', 'words')" class="icon-btn text-red-500 hover:bg-red-100">${createTrashIcon()}<span class="tooltip">삭제</span></button>
                         </div>
                     </div>
                     `;
@@ -1482,9 +1519,9 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-1 flex-shrink-0">
-                        <button class="icon-btn" onclick="speak('${item.en.replace(/'/g, "\\'")}', 'en-US')"><i data-lucide="volume-2"></i><span class="tooltip">영어 듣기</span></button>
-                       <button onclick="toggleReadStatus('${item.id}', 'sentences')" class="icon-btn"><i data-lucide="${item.read ? 'eye-off' : 'eye'}"></i><span class="tooltip">${item.read ? '읽지 않음으로' : '읽음으로'}</span></button>
-                       <button onclick="deleteListItem('${item.id}', 'sentences')" class="icon-btn text-red-500 hover:bg-red-100"><i data-lucide="trash-2"></i><span class="tooltip">삭제</span></button>
+                        <button class="icon-btn" onclick="speak('${item.en.replace(/'/g, "\\'")}', 'en-US')">${createVolumeIcon('w-5 h-5')}<span class="tooltip">영어 듣기</span></button>
+                       <button onclick="toggleReadStatus('${item.id}', 'sentences')" class="icon-btn">${item.read ? createEyeOffIcon() : createEyeIcon()}<span class="tooltip">${item.read ? '읽지 않음으로' : '읽음으로'}</span></button>
+                       <button onclick="deleteListItem('${item.id}', 'sentences')" class="icon-btn text-red-500 hover:bg-red-100">${createTrashIcon()}<span class="tooltip">삭제</span></button>
                     </div>
                     </div>
                     `;
@@ -1493,6 +1530,18 @@
             
             safeCreateIcons();
         }
+
+        // --- NEW: Icon functions for list rendering ---
+        function createEyeIcon(size = 'w-5 h-5') {
+            return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${size} text-gray-500"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+        }
+        function createEyeOffIcon(size = 'w-5 h-5') {
+            return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${size} text-gray-500"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path><path d="M6.61 6.61A13.16 13.16 0 0 0 2 12s3 7 10 7a9.92 9.92 0 0 0 5.43-1.61"></path><line x1="2" x2="22" y1="2" y2="22"></line></svg>`;
+        }
+        function createTrashIcon(size = 'w-5 h-5') {
+            return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${size} text-red-500"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M15 6V4c0-1-1-2-2-2h-2c-1 0-2 1-2 2v2"></path></svg>`;
+        }
+        // --- END NEW ---
         
         window.deleteListItem = function(id, type) {
             showConfirmationModal("정말로 이 항목을 삭제하시겠습니까?", async () => {
@@ -1695,7 +1744,7 @@
                 showToast("Firebase에 연결되지 않았습니다. 구성 정보를 확인해주세요.", "error");
                 return;
             }
-            // --- NEW: Add detailed auth logging for debugging ---
+             // --- NEW: Add detailed auth logging for debugging ---
             console.log("Attempting file upload. Current user object:", auth.currentUser);
             console.log("User ID being used for path:", userId);
             console.log("App ID being used for path:", appId);
@@ -1740,6 +1789,7 @@
                 }, 
                 // --- 업로드 성공 시 ---
                 async () => {
+                    let firestoreError = null;
                     try {
                         const metadata = uploadTask.snapshot.metadata;
                         // Firestore 경로: artifacts/{appId}/users/{userId}/file_metadata/{docId}
@@ -1751,11 +1801,10 @@
                             timestamp: new Date()
                         });
                         
-                        showToast("파일이 성공적으로 업로드되었습니다.", "success");
-                        
                     } catch (error) {
-                        console.error("Error saving file metadata to Firestore:", error);
-                        showToast("파일 정보 저장에 실패했습니다. (DB 오류)", "error");
+                        firestoreError = error;
+                        console.error("CRITICAL: Error saving file metadata to Firestore:", error.code, error.message);
+                        showToast(`파일 정보 저장 실패: ${error.code}`, "error");
                         // 메타데이터 저장이 실패하면 Storage의 파일도 삭제 시도 (클린업)
                         await deleteObject(uploadTask.snapshot.ref).catch(err => console.error("Orphaned file cleanup failed:", err));
                         
@@ -1765,6 +1814,9 @@
                         uploadProgressBar.style.width = '0%';
                         fileUploadInput.value = '';
                         fileUploadButton.disabled = false;
+                        if (!firestoreError) {
+                            showToast("파일이 성공적으로 업로드되었습니다.", "success");
+                        }
                     }
                 }
             );
@@ -1801,14 +1853,20 @@
                         <p class="text-sm text-gray-500">${(fileData.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
                     <div class="flex items-center gap-1 flex-shrink-0">
-                        <button class="icon-btn" onclick="downloadFile('${fileData.fullPath}')"><i data-lucide="download"></i></button>
-                        <button class="icon-btn text-red-500" onclick="deleteFile('${fileData.id}', '${fileData.fullPath}')"><i data-lucide="trash-2"></i></button>
+                        <button class="icon-btn" onclick="downloadFile('${fileData.fullPath}')">${createDownloadIcon()}</button>
+                        <button class="icon-btn text-red-500" onclick="deleteFile('${fileData.id}', '${fileData.fullPath}')">${createTrashIcon()}</button>
                     </div>
                 `;
                 fileListDiv.appendChild(fileElement);
             });
             safeCreateIcons();
         }
+
+        // --- NEW: Icon functions for file list buttons ---
+        function createDownloadIcon(size = 'w-5 h-5') {
+            return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${size} text-blue-600"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg>`;
+        }
+        // --- END NEW ---
         
         window.downloadFile = function(fullPath) {
             getDownloadURL(ref(storage, fullPath))
@@ -1901,9 +1959,9 @@
                             </div>
                         </div>
                         <div class="flex items-center flex-shrink-0 gap-1">
-                            <button class="icon-btn" onclick="speak('${s.en.replace(/'/g, "\\'")}', 'en-US')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">영어 듣기</span></button>
-                            <button class="icon-btn" onclick="speak('${s.ko.replace(/'/g, "\\'")}', 'ko-KR')"><i data-lucide="volume-2" class="w-5 h-5"></i><span class="tooltip">한국어 듣기</span></button>
-                            <button class="icon-btn" onclick="saveSentence('${s.en.replace(/'/g, "\\'")}', '${s.ko.replace(/'/g, "\\'")}')"><i data-lucide="save" class="w-5 h-5"></i><span class="tooltip">저장하기</span></button>
+                            <button class="icon-btn" onclick="speak('${s.en.replace(/'/g, "\\'")}', 'en-US')">${createVolumeIcon('w-5 h-5')}<span class="tooltip">영어 듣기</span></button>
+                            <button class="icon-btn" onclick="speak('${s.ko.replace(/'/g, "\\'")}', 'ko-KR')">${createVolumeIcon('w-5 h-5')}<span class="tooltip">한국어 듣기</span></button>
+                            <button class="icon-btn" onclick="saveSentence('${s.en.replace(/'/g, "\\'")}', '${s.ko.replace(/'/g, "\\'")}')">${createSaveIcon('w-5 h-5')}<span class="tooltip">저장하기</span></button>
                         </div>
                     </li>
                 `).join('');
@@ -2026,4 +2084,3 @@
     </script>
 </body>
 </html>
-
