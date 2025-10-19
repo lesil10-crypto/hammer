@@ -716,7 +716,7 @@
         
         async function handleSearch(query) {
             if (!apiKey) { 
-                showToast("Google AI API 키가 설정되지 않았습니다. 코드에 키를 입력하고 다시 배포해주세요.", "error");
+                showToast("Google AI API 키가 설정되지 않았습니다.", "error");
                 return;
             }
             if (!auth || !auth.currentUser) {
@@ -1782,16 +1782,12 @@
         const fileUploadButton = document.getElementById('file-upload-button');
         
         fileUploadButton.addEventListener('click', () => {
+            // 버튼 클릭 시 Firebase 연결 및 사용자 상태를 다시 확인
             if (!auth || !auth.currentUser) {
                 showToast("Firebase에 연결되지 않았습니다. 구성 정보를 확인해주세요.", "error");
                 return;
             }
-             // --- NEW: Add detailed auth logging for debugging ---
-            console.log("Attempting file upload. Current user object:", auth.currentUser);
-            console.log("User ID being used for path:", userId);
-            console.log("App ID being used for path:", appId);
-            // --- END NEW ---
-
+            
             const file = fileUploadInput.files[0];
             if (!file) {
                 showToast("파일을 선택해주세요.", "warning");
@@ -1803,23 +1799,30 @@
                 return;
             }
             
-            // ** FINAL CORRECTED PATH **
-            const storageRef = ref(storage, `artifacts/${appId}/users/${userId}/files/${file.name}`);
+            // === [최종 해결 로직] Firestore 및 Storage 경로 안전화 ===
+            // 1. Storage 경로 안전화: 'c/bd05c476dac3d6a0_index.html' -> 'c' 만 사용
+            const safeAppId = appId.includes('/') ? appId.split('/')[0] : appId;
+
+            // 2. Storage 경로: safeAppId 사용
+            const storagePath = `artifacts/${safeAppId}/users/${userId}/files/${file.name}`;
+            const storageRef = ref(storage, storagePath);
             
-            const uploadTask = uploadBytesResumable(storageRef, file);
+            // 3. Firestore 메타데이터 경로 안전화: Firestore는 컬렉션 이름에 '/' 허용 안함
+            const firestoreAppId = appId.replace(/\//g, '_'); // 슬래시를 언더바로 치환
+
+            // === 로딩 및 버튼 비활성화 시작 ===
             const uploadProgressContainer = document.getElementById('upload-progress-container');
             const uploadProgressBar = document.getElementById('upload-progress-bar');
-            
-            // 업로드 시작 UI
             uploadProgressContainer.classList.remove('hidden');
             fileUploadButton.disabled = true;
+            
+            const uploadTask = uploadBytesResumable(storageRef, file);
 
             uploadTask.on('state_changed', 
                 (snapshot) => {
                     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                     uploadProgressBar.style.width = progress + '%';
                 }, 
-                // --- FIX: 에러 핸들링 강화 ---
                 (error) => {
                     console.error("Upload failed. Firebase Error Code:", error.code);
                     console.error("Full Error:", error);
@@ -1830,13 +1833,13 @@
                     uploadProgressBar.style.width = '0%';
                     fileUploadButton.disabled = false;
                 }, 
-                // --- 업로드 성공 시 ---
                 async () => {
                     let firestoreError = null;
                     try {
                         const metadata = uploadTask.snapshot.metadata;
-                        // Firestore 경로: artifacts/{appId}/users/{userId}/file_metadata/{docId}
-                        await addDoc(collection(db, `artifacts/${appId}/users/${userId}/file_metadata`), {
+                        
+                        // Firestore 경로: firestoreAppId 사용
+                        await addDoc(collection(db, `artifacts/${firestoreAppId}/users/${userId}/file_metadata`), {
                             name: metadata.name,
                             fullPath: metadata.fullPath,
                             size: metadata.size,
@@ -1847,7 +1850,7 @@
                     } catch (error) {
                         firestoreError = error;
                         console.error("CRITICAL: Error saving file metadata to Firestore:", error.code, error.message);
-                        showToast(`파일 정보 저장 실패: ${error.code}`, "error");
+                        showToast(`파일 정보 저장 실패: ${error.code} (Firestore)`, "error");
                         // 메타데이터 저장이 실패하면 Storage의 파일도 삭제 시도 (클린업)
                         await deleteObject(uploadTask.snapshot.ref).catch(err => console.error("Orphaned file cleanup failed:", err));
                         
@@ -1889,7 +1892,11 @@
         window.deleteFile = function(docId, fullPath) {
             showConfirmationModal("정말로 이 파일을 삭제하시겠습니까?", async () => {
                 const fileRef = ref(storage, fullPath);
-                const docRef = doc(db, `artifacts/${appId}/users/${userId}/file_metadata/${docId}`);
+                
+                // Firestore 메타데이터 경로 안전화
+                const firestoreAppId = appId.replace(/\//g, '_');
+                const docRef = doc(db, `artifacts/${firestoreAppId}/users/${userId}/file_metadata/${docId}`);
+                
                 try {
                     await deleteObject(fileRef);
                     await deleteDoc(docRef);
@@ -2082,4 +2089,3 @@
     </script>
 </body>
 </html>
-
