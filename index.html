@@ -245,6 +245,12 @@
     </style>
 </head>
 <body class="bg-slate-100 text-gray-800">
+    <!-- 
+      [수정]
+      'visibility: hidden'을 기본값으로 하여 Firebase 인증이 완료된 후
+      initializeFirebase() 함수에서 'visible'로 변경합니다.
+      이는 사용자 ID가 확정되기 전에 앱이 표시되는 것을 방지합니다.
+    -->
     <div id="app-container" style="visibility: hidden;">
         <div class="max-w-4xl mx-auto p-4 pb-24">
             <!-- Header -->
@@ -299,7 +305,8 @@
                     <i data-lucide="calendar" class="mr-2 text-blue-500"></i>Google 캘린더
                 </h3>
                 <div class="w-full h-[600px] rounded-lg overflow-hidden border-2 border-slate-200">
-                     <iframe src="https://calendar.google.com/calendar/embed?src=primary&ctz=Asia%2FSeoul" style="border: 0" width="100%" height="100%" frameborder="0" scrolling="no"></iframe>
+                     <!-- [수정됨] 사용자가 제공한 iframe 코드로 교체 -->
+                     <iframe src="https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=Asia%2FSeoul&showPrint=0&src=bGVzaWwxMEBnbWFpbC5jb20&src=aGs2Y2Qzb2ZoYmc3NHRuajA2cjFzNGUxaWNAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&src=a28uc291dGhfa29yZWEjaG9saWRheUBncm91cC52LmNhbGVuZGFyLmdvb2dsZS5jb20&color=%23e67c73&color=%238e24aa&color=%237986cb" style="border:solid 1px #777" width="100%" height="100%" frameborder="0" scrolling="no"></iframe>
                 </div>
             </div>
 
@@ -446,24 +453,26 @@
     <script type="module">
         // Firebase Modular SDK imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, addDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, 
+            onSnapshot, collection, addDoc, writeBatch, getDocs, query, setLogLevel
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { 
+            getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         // =========================================================================
-        // === [수정됨] GitHub Pages 배포를 위한 하드코딩된 설정 ===
-        // === 중요: 이 키는 공개 GitHub 저장소에 노출됩니다. ===
+        // === 사용자 설정: Firebase 및 Google Cloud API 키 ===
         // =========================================================================
-        const USER_FIREBASE_CONFIG = {
-          apiKey: "AIzaSyDKmpQO6htm7jZ2DByUfGnmocZP7dpTJhs",
-          authDomain: "projec-48c55.firebaseapp.com",
-          projectId: "projec-48c55",
-          storageBucket: "projec-48c55.appspot.com",
-          messagingSenderId: "376464552007",
-          appId: "1:376464552007:web:929b53196fc86af19dc162",
-          measurementId: "G-HMKJMNFGM4"
-        };
-        const USER_GEMINI_API_KEY = "AIzaSyDKmpQO6htm7jZ2DByUfGnmocZP7dpTJhs"; 
+        
+        // [수정] 하드코딩된 Firebase 설정을 제거합니다.
+        // 캔버스 환경에서 제공하는 __firebase_config 변수를 사용합니다.
+        // const USER_FIREBASE_CONFIG = { ... }; // 이 블록 전체 제거
+        
+        // [수정] 하드코딩된 Gemini API 키를 제거합니다.
+        // 캔버스 환경에서 API 키를 자동으로 주입하도록 빈 문자열로 설정합니다.
+        const USER_GEMINI_API_KEY = ""; 
         // =========================================================================
         
         // ---------------------------
@@ -479,7 +488,7 @@
         const printContainer = document.getElementById('print-container');
         const printContentArea = document.getElementById('print-content-area');
         
-        // [수정됨] 하드코딩된 API 키를 사용
+        // [수정] USER_GEMINI_API_KEY 변수(이제 빈 문자열)를 참조합니다.
         const apiKey = USER_GEMINI_API_KEY; 
         const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent`;
         const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict`;
@@ -490,8 +499,7 @@
         let db, auth, storage, userId;
         let app; 
         
-        // [수정됨] GitHub Pages에서는 __app_id가 없으므로 'default-ai-vocab-app'을 사용
-        // 이 ID는 새로운 Firebase 규칙과 일치해야 합니다.
+        // [수정] __app_id 변수를 사용하여 Firestore 경로의 기반이 될 appId를 설정합니다.
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-ai-vocab-app';
         
         // Tab Management
@@ -511,6 +519,7 @@
                 return;
             }
             fileListDiv.innerHTML = '';
+            // [수정] Firestore 데이터를 JS 메모리에서 정렬 (orderBy() 대신)
             files.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
 
             files.forEach(fileData => {
@@ -549,13 +558,15 @@
         function loadUserLists() {
             if (!db || !userId) return;
 
-            const wordsQuery = collection(db, `artifacts/${appId}/users/${userId}/saved_words`);
+            // [규칙 준수] Firestore 경로가 '/artifacts/{appId}/users/{userId}/...' 규칙과 일치합니다.
+            const wordsQuery = query(collection(db, `artifacts/${appId}/users/${userId}/saved_words`));
             onSnapshot(wordsQuery, (snapshot) => {
                 savedWords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if(window.currentListType === 'words') window.renderList();
             }, (error) => console.error("Error loading words:", error));
 
-            const sentencesQuery = collection(db, `artifacts/${appId}/users/${userId}/saved_sentences`);
+            // [규칙 준수] Firestore 경로가 '/artifacts/{appId}/users/{userId}/...' 규칙과 일치합니다.
+            const sentencesQuery = query(collection(db, `artifacts/${appId}/users/${userId}/saved_sentences`));
             onSnapshot(sentencesQuery, (snapshot) => {
                 savedSentences = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if(window.currentListType === 'sentences') window.renderList();
@@ -564,7 +575,10 @@
 
         function listenForFiles() {
             if (!db || !userId) return;
-            const filesQuery = collection(db, `artifacts/${appId}/users/${userId}/file_metadata`);
+            
+            // [규칙 준수] Firestore 경로가 '/artifacts/{appId}/users/{userId}/...' 규칙과 일치합니다.
+            // [수정] `firestoreAppId` 대신 `appId`를 사용하도록 수정되었습니다.
+            const filesQuery = query(collection(db, `artifacts/${appId}/users/${userId}/file_metadata`));
             onSnapshot(filesQuery, (snapshot) => {
                 const files = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderFileList(files);
@@ -583,17 +597,20 @@
         
         // =========================================================================
 
-        // [수정됨] Firebase Initialization and Authentication
+        // Firebase Initialization and Authentication
         async function initializeFirebase() {
-            // [수정됨] Canvas 변수 대신 하드코딩된 CONFIG를 사용
-            const firebaseConfig = USER_FIREBASE_CONFIG;
+            // [수정] 하드코딩된 USER_FIREBASE_CONFIG 대신 __firebase_config 변수를 최우선으로 사용합니다.
+            // __firebase_config가 없으면 빈 객체 '{}'를 사용합니다.
+            const configString = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+            const firebaseConfig = JSON.parse(configString);
 
             try {
+                // [수정] 이제 __firebase_config에 apiKey가 있는지 확인합니다.
                 if (!firebaseConfig.apiKey) {
-                    console.error("Firebase config is missing.");
-                    showToast("Firebase 구성 정보가 없습니다. 코드에 직접 입력해야 합니다.", "error");
-                    document.getElementById('app-container').style.visibility = 'visible';
-                    return;
+                    console.error("Firebase config is missing from __firebase_config.");
+                    showToast("Firebase 구성 정보가 없습니다. 환경 변수가 올바르게 주입되었는지 확인하세요.", "error");
+                    document.getElementById('app-container').style.visibility = 'visible'; // UI를 보여주되,
+                    return; // 기능은 작동하지 않음
                 }
                 
                 app = initializeApp(firebaseConfig);
@@ -601,11 +618,24 @@
                 auth = getAuth(app);
                 storage = getStorage(app);
 
-                // [수정됨] GitHub Pages에서는 항상 익명 로그인을 사용
-                const userCredential = await signInAnonymously(auth);
-                userId = userCredential.user.uid;
-                console.log("Authenticated Anonymously. User ID:", userId);
-                
+                // Firestore 디버그 로깅 활성화
+                setLogLevel('debug');
+
+                // [규칙 준수] __initial_auth_token을 사용하여 인증합니다.
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                if (initialAuthToken) {
+                    const userCredential = await signInWithCustomToken(auth, initialAuthToken);
+                    userId = userCredential.user.uid;
+                    console.log("Authenticated with Custom Token. User ID:", userId);
+                } else {
+                    // __initial_auth_token이 없으면 익명 로그인을 시도합니다.
+                    console.log("No custom token, signing in anonymously...");
+                    const userCredential = await signInAnonymously(auth);
+                    userId = userCredential.user.uid;
+                    console.log("Authenticated Anonymously. User ID:", userId);
+                }
+
+                // 인증 성공 후 앱 UI 표시 및 데이터 로드
                 document.getElementById('app-container').style.visibility = 'visible';
                 loadUserLists();
                 listenForFiles();
@@ -614,9 +644,8 @@
             } catch (error) {
                 console.error("Firebase Initialization/Auth Error: ", error);
                 showToast("데이터베이스 연결 또는 인증에 실패했습니다.", "error");
-                // 오류가 발생해도 앱을 보이게 하여 최소한의 UI는 표시
+                // 인증 실패 시에도 UI는 표시하여 문제를 인지할 수 있게 함
                 document.getElementById('app-container').style.visibility = 'visible';
-                safeCreateIcons();
             }
         }
         
@@ -625,12 +654,16 @@
         // ---------------------------
 
         async function fetchWithRetry(baseUrl, payload, retries = 3) {
-            if (!apiKey) {
-                showToast("Google AI API 키가 설정되지 않았습니다.", "error");
-                throw new Error("Google AI API Key is missing.");
+            // [수정] apiKey가 빈 문자열("")인 경우에도 fetch를 시도합니다.
+            // 캔버스 환경이 빈 API 키를 감지하고 런타임에 주입합니다.
+            if (apiKey === null || typeof apiKey === 'undefined') {
+                 showToast("Google AI API 키가 설정되지 않았습니다.", "error");
+                 throw new Error("Google AI API Key is missing.");
             }
 
+            // [수정] 쿼리 파라미터에 key를 추가합니다. apiKey가 빈 문자열이어도 괜찮습니다.
             const finalUrl = `${baseUrl}?key=${apiKey}`;
+            
             for (let i = 0; i < retries; i++) {
                 try {
                     const response = await fetch(finalUrl, {
@@ -645,8 +678,9 @@
                     }
                     return await response.json();
                 } catch (error) {
-                    console.error(`Attempt ${i + 1} failed:`, error);
+                    // [수정] API 호출 실패 시 재시도 로직 (콘솔에 에러를 기록하지 않음)
                     if (i === retries - 1) {
+                        console.error("API call failed after retries:", error);
                         showToast("AI 서버 응답에 실패했습니다. 잠시 후 다시 시도해주세요.", "error");
                         throw error;
                     }
@@ -661,6 +695,7 @@
                 contents: [{ parts: [{ text: prompt }] }],
             };
             if (isJson) {
+                // [수정] JSON 스키마를 사용하는 대신 responseMimeType을 설정합니다.
                 payload.generationConfig = { responseMimeType: "application/json" };
             }
             
@@ -672,6 +707,7 @@
             }
 
             if (isJson) {
+                // Gemini가 JSON 모드에서도 ```json ... ``` 마크다운을 반환할 수 있으므로 처리합니다.
                 let jsonString = text.trim();
                 if (jsonString.startsWith("```json")) {
                     jsonString = jsonString.slice(7, -3).trim();
@@ -716,7 +752,8 @@
         // ---------------------------
         
         async function handleSearch(query) {
-            if (!apiKey) { 
+            // [수정] apiKey가 빈 문자열이어도 통과시킵니다.
+            if (apiKey === null || typeof apiKey === 'undefined') { 
                 showToast("Google AI API 키가 설정되지 않았습니다.", "error");
                 return;
             }
@@ -1448,6 +1485,7 @@
         
         async function addWordToHistory(word, meaning) {
             if (!db || !userId) return;
+            // [규칙 준수] Firestore 경로가 '/artifacts/{appId}/users/{userId}/...' 규칙과 일치합니다.
             const wordRef = doc(db, `artifacts/${appId}/users/${userId}/saved_words/${word}`);
             try {
                 await setDoc(wordRef, { word, meaning, timestamp: new Date(), read: false }, { merge: true });
@@ -1462,6 +1500,7 @@
                 return;
             }
             try {
+                // [규칙 준수] Firestore 경로가 '/artifacts/{appId}/users/{userId}/...' 규칙과 일치합니다.
                 const sentenceRef = collection(db, `artifacts/${appId}/users/${userId}/saved_sentences`);
                 await addDoc(sentenceRef, { en, ko, timestamp: new Date(), read: false });
                 showToast("예문이 저장되었습니다.", "success");
@@ -1513,8 +1552,10 @@
         function renderList() {
             let items = currentListType === 'words' ? [...savedWords] : [...savedSentences];
 
+            // [수정] Firestore의 orderBy 대신 JS에서 직접 정렬
             items.sort((a, b) => {
                 if (!a.timestamp || !b.timestamp) return 0;
+                // Firestore 타임스탬프 객체와 JS Date 객체를 모두 처리
                 const timeA = a.timestamp.toMillis ? a.timestamp.toMillis() : new Date(a.timestamp).getTime();
                 const timeB = b.timestamp.toMillis ? b.timestamp.toMillis() : new Date(b.timestamp).getTime();
                 return timeB - timeA;
@@ -1590,6 +1631,7 @@
             showConfirmationModal("정말로 이 항목을 삭제하시겠습니까?", async () => {
                 if (!db || !userId) return;
                 const collectionName = type === 'words' ? 'saved_words' : 'saved_sentences';
+                // [규칙 준수] Firestore 경로가 '/artifacts/{appId}/users/{userId}/...' 규칙과 일치합니다.
                 const docRef = doc(db, `artifacts/${appId}/users/${userId}/${collectionName}/${id}`);
                 try {
                     await deleteDoc(docRef);
@@ -1604,6 +1646,7 @@
         window.toggleReadStatus = async function(id, type) {
             if (!db || !userId) return;
             const collectionName = type === 'words' ? 'saved_words' : 'saved_sentences';
+            // [규칙 준수] Firestore 경로가 '/artifacts/{appId}/users/{userId}/...' 규칙과 일치합니다.
             const docRef = doc(db, `artifacts/${appId}/users/${userId}/${collectionName}/${id}`);
             try {
                 const docSnap = await getDoc(docRef);
@@ -1645,6 +1688,7 @@
                 const collectionName = currentListType === 'words' ? 'saved_words' : 'saved_sentences';
                 
                 checkedItems.forEach(item => {
+                    // [규칙 준수] Firestore 경로가 '/artifacts/{appId}/users/{userId}/...' 규칙과 일치합니다.
                     const docRef = doc(db, `artifacts/${appId}/users/${userId}/${collectionName}/${item.dataset.id}`);
                     if (action === 'delete') {
                         batch.delete(docRef);
@@ -1800,12 +1844,18 @@
                 return;
             }
             
-            // Storage 경로: appId 사용 (예: 'default-ai-vocab-app')
+            // [수정] 복잡한 경로 안전화 로직 제거.
+            // Storage와 Firestore 모두 동일한 `appId` 변수를 사용합니다.
+            // Firestore 규칙은 `/` 문자를 허용하며, Storage도 마찬가지입니다.
+            // `appId`는 `listenForFiles`에서 사용된 것과 동일해야 합니다.
+            
+            // 1. Storage 경로 (Storage는 '/'를 폴더 구분자로 사용함)
+            // [규칙 준수] Storage 경로는 '/artifacts/{appId}/users/{userId}/...' 패턴을 따릅니다.
             const storagePath = `artifacts/${appId}/users/${userId}/files/${file.name}`;
             const storageRef = ref(storage, storagePath);
             
-            // Firestore 메타데이터 경로: appId 사용
-            const firestoreCollectionPath = `artifacts/${appId}/users/${userId}/file_metadata`;
+            // 2. Firestore 메타데이터 경로는 listenForFiles와 동일한 `appId`를 사용합니다.
+            // (별도 변환 X)
 
             // === 로딩 및 버튼 비활성화 시작 ===
             const uploadProgressContainer = document.getElementById('upload-progress-container');
@@ -1823,7 +1873,7 @@
                 (error) => {
                     console.error("Upload failed. Firebase Error Code:", error.code);
                     console.error("Full Error:", error);
-                    showToast(`파일 업로드에 실패했습니다. (Firebase Storage 규칙 확인 필요: ${error.code})`, "error");
+                    showToast(`파일 업로드에 실패했습니다. (규칙 확인: ${error.code})`, "error");
                     
                     // UI 초기화
                     uploadProgressContainer.classList.add('hidden');
@@ -1835,10 +1885,11 @@
                     try {
                         const metadata = uploadTask.snapshot.metadata;
                         
-                        // Firestore 경로: firestoreCollectionPath 사용
-                        await addDoc(collection(db, firestoreCollectionPath), {
+                        // [수정] `firestoreAppId` 대신 `appId`를 사용합니다.
+                        // [규칙 준수] Firestore 경로가 '/artifacts/{appId}/users/{userId}/...' 규칙과 일치합니다.
+                        await addDoc(collection(db, `artifacts/${appId}/users/${userId}/file_metadata`), {
                             name: metadata.name,
-                            fullPath: metadata.fullPath,
+                            fullPath: metadata.fullPath, // Storage의 전체 경로 저장
                             size: metadata.size,
                             contentType: metadata.contentType,
                             timestamp: new Date()
@@ -1847,7 +1898,7 @@
                     } catch (error) {
                         firestoreError = error;
                         console.error("CRITICAL: Error saving file metadata to Firestore:", error.code, error.message);
-                        showToast(`파일 정보 저장 실패: ${error.code} (Firestore 규칙 확인 필요)`, "error");
+                        showToast(`파일 정보 저장 실패: ${error.code} (Firestore)`, "error");
                         // 메타데이터 저장이 실패하면 Storage의 파일도 삭제 시도 (클린업)
                         await deleteObject(uploadTask.snapshot.ref).catch(err => console.error("Orphaned file cleanup failed:", err));
                         
@@ -1877,7 +1928,8 @@
                 .then((url) => {
                     const a = document.createElement('a');
                     a.href = url;
-                    a.target = '_blank';
+                    a.target = '_blank'; // 새 탭에서 열기
+                    // a.download = fullPath.split('/').pop(); // 직접 다운로드 (브라우저 설정에 따라 다름)
                     a.click();
                 })
                 .catch((error) => {
@@ -1890,15 +1942,19 @@
             showConfirmationModal("정말로 이 파일을 삭제하시겠습니까?", async () => {
                 const fileRef = ref(storage, fullPath);
                 
-                // Firestore 메타데이터 경로
+                // [수정] `firestoreAppId` 대신 `appId`를 사용합니다.
+                // [규칙 준수] Firestore 경로가 '/artifacts/{appId}/users/{userId}/...' 규칙과 일치합니다.
                 const docRef = doc(db, `artifacts/${appId}/users/${userId}/file_metadata/${docId}`);
                 
                 try {
+                    // 1. Storage에서 파일 삭제
                     await deleteObject(fileRef);
+                    // 2. Firestore에서 메타데이터 삭제
                     await deleteDoc(docRef);
                     showToast("파일이 삭제되었습니다.", "success");
                 } catch (error) {
                     console.error("Error deleting file:", error);
+                    // Storage에 파일이 이미 없더라도(object-not-found) Firestore 메타데이터는 삭제 시도
                     if (error.code === 'storage/object-not-found') {
                         try {
                             await deleteDoc(docRef);
@@ -1989,7 +2045,8 @@
         // ---------------------------
         
         async function translateWordOnHover(word) {
-            if (!apiKey) { 
+            // [수정] apiKey가 빈 문자열이어도 통과
+            if (apiKey === null || typeof apiKey === 'undefined') { 
                 return "AI 키 미설정";
             }
             if (translationCache[word]) {
@@ -2065,8 +2122,15 @@
                     url: window.location.href
                 }).catch(err => console.error("Share failed", err));
             } else {
-                navigator.clipboard.writeText(window.location.href);
-                showToast("링크가 클립보드에 복사되었습니다.", "success");
+                // [수정] execCommand는 더 이상 사용되지 않으므로, navigator.clipboard 사용.
+                // iFrame 내에서 작동하지 않을 수 있으나, 이것이 표준입니다.
+                try {
+                    navigator.clipboard.writeText(window.location.href);
+                    showToast("링크가 클립보드에 복사되었습니다.", "success");
+                } catch (err) {
+                    console.error("Clipboard write failed:", err);
+                    showToast("클립보드 복사에 실패했습니다.", "error");
+                }
             }
         });
         
@@ -2085,3 +2149,4 @@
     </script>
 </body>
 </html>
+
