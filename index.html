@@ -1382,19 +1382,7 @@
 });
 
 
-
-            // [MODIFIED] Clickable word in word list modal
-            if (e.target.closest('.searchable-list-item') && isSearchUnlocked) { 
-                const word = e.target.closest('.searchable-list-item').dataset.word; 
-                if(word) { 
-                    searchInput.value = word; 
-                    checkAndLoadPage(word); // [MODIFIED] Check for saved page first
-                    hideListModal(); 
-                } 
-            } 
-        });
-
-        searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && isSearchUnlocked) { handleSearch(searchInput.value.trim()); } });
+                searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && isSearchUnlocked) { handleSearch(searchInput.value.trim()); } });
         document.getElementById('word-list-btn').addEventListener('click', () => showListModal('words'));
         document.getElementById('sentence-list-btn').addEventListener('click', () => showListModal('sentences'));
         document.getElementById('file-storage-btn').addEventListener('click', showFileModal);
