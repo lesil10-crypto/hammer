@@ -1369,7 +1369,7 @@
     const listItemTarget = e.target.closest('.searchable-list-item'); // <<< 변수로 분리
     console.log("[Click Event] Closest '.searchable-list-item':", listItemTarget); // <<< 로그 2: 가장 가까운 목록 아이템 찾았는지 확인
 
-    if (listItemTarget && isSearchUnlocked) { // <<< listItemTarget 변수 사용
+    if (listItemTarget) { // <<< listItemTarget 변수 사용
         console.log("[Click Event] List item condition met! Processing word..."); // <<< 로그 3: 조건문 통과 확인
         const word = listItemTarget.dataset.word; // <<< listItemTarget 사용
         if(word) {
