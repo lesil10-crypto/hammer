@@ -1368,6 +1368,7 @@
     // Clickable word in word list modal (이 부분이 문제)
     const listItemTarget = e.target.closest('.searchable-list-item'); // <<< 변수로 분리
     console.log("[Click Event] Closest '.searchable-list-item':", listItemTarget); // <<< 로그 2: 가장 가까운 목록 아이템 찾았는지 확인
+    console.log("[Click Event] isSearchUnlocked value:", isSearchUnlocked);
 
     if (listItemTarget) { // <<< listItemTarget 변수 사용
         console.log("[Click Event] List item condition met! Processing word..."); // <<< 로그 3: 조건문 통과 확인
